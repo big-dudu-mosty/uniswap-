@@ -1,0 +1,66 @@
+{
+  "model": "sonnet",
+  "description": "Full-Stack DEX Project Claude Configuration",
+  "hooks": {
+    "postToolUse": {
+      "enabled": false,
+      "description": "Auto-format code after Edit/Write operations",
+      "script": ".claude/hooks/post-tool-use-format.sh",
+      "note": "Set enabled to true to activate. Requires eslint, prettier installed."
+    },
+    "preToolUse": {
+      "enabled": false,
+      "description": "Prevent code modifications on protected branches",
+      "script": ".claude/hooks/pre-tool-use-protect-branch.sh",
+      "note": "Set enabled to true to activate. Protects main/master/production branches."
+    }
+  },
+  "commands": {
+    "directories": [".claude/commands"],
+    "description": "Slash commands for quick workflow actions"
+  },
+  "skills": {
+    "directories": [".claude/skills"],
+    "description": "AI skills that automatically activate based on context"
+  },
+  "systemPrompt": "You are working on the Full-Stack DEX project. Always read .claude/docs/constitution.md before making any code changes. Follow the Spec-Driven Development (SDD) workflow: specification.md → plan-template.md → tasks-template.md → TDD implementation. Use .claude/docs/operational-guide.md as your operational guide.",
+  "contextFiles": [
+    ".claude/docs/constitution.md",
+    ".claude/docs/operational-guide.md",
+    ".claude/docs/specification.md"
+  ],
+  "allowedTools": [
+    "Read",
+    "Write",
+    "Edit",
+    "Grep",
+    "Glob",
+    "Bash",
+    "LSP",
+    "WebFetch",
+    "WebSearch"
+  ],
+  "projectInfo": {
+    "name": "Full-Stack DEX",
+    "type": "Decentralized Exchange",
+    "techStack": {
+      "contracts": "Solidity 0.8.20 + Hardhat",
+      "backend": "NestJS + TypeORM + PostgreSQL + Redis",
+      "frontend": "React 18 + TypeScript + Wagmi + Viem"
+    },
+    "principles": [
+      "Decentralization First",
+      "Simplicity Over Abstraction",
+      "Security Non-Negotiable",
+      "Test-Driven Development"
+    ]
+  },
+  "reminders": [
+    "Always check .claude/docs/constitution.md before making changes",
+    "Follow TDD: Red → Green → Refactor",
+    "No private keys in frontend code",
+    "Backend is read-only (no transaction execution)",
+    "All API inputs must be validated",
+    "Max 3 files per commit/change"
+  ]
+}

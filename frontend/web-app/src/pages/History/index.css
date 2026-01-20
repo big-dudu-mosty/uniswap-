@@ -1,0 +1,68 @@
+.history-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.history-container .ant-card {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.history-container .ant-table {
+  margin-top: 16px;
+  background: transparent;
+}
+
+/* 表头样式 - 深色主题 */
+.history-container .ant-table-thead > tr > th {
+  background-color: rgba(0, 185, 107, 0.15) !important;
+  color: #00b96b !important;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(0, 185, 107, 0.3) !important;
+}
+
+/* 表格行样式 */
+.history-container .ant-table-tbody > tr > td {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.history-container .ant-table-tbody > tr:hover > td {
+  background: rgba(0, 185, 107, 0.08) !important;
+}
+
+/* 分页器样式 */
+.history-container .ant-pagination {
+  margin-top: 16px;
+}
+
+.history-container .ant-pagination-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.history-container .ant-pagination-item-active {
+  background: #00b96b;
+  border-color: #00b96b;
+}
+
+.history-container .ant-tag {
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Tabs 样式 */
+.history-container .ant-tabs-tab {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.history-container .ant-tabs-tab-active {
+  color: #00b96b !important;
+}
+
+.history-container .ant-tabs-ink-bar {
+  background: #00b96b;
+}

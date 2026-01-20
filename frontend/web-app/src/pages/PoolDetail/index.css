@@ -1,0 +1,68 @@
+.pool-detail-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.pool-detail-header {
+  margin-bottom: 24px;
+}
+
+.pool-detail-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.pool-detail-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.pool-detail-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.pool-detail-empty h3 {
+  margin-bottom: 16px;
+  color: #999;
+}
+
+/* 表头样式 - 深色主题 */
+.pool-detail-container .ant-table-thead > tr > th {
+  background-color: rgba(0, 185, 107, 0.15) !important;
+  color: #00b96b !important;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(0, 185, 107, 0.3) !important;
+}
+
+/* 表格行样式 */
+.pool-detail-container .ant-table-tbody > tr > td {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pool-detail-container .ant-table-tbody > tr:hover > td {
+  background: rgba(0, 185, 107, 0.08) !important;
+}
+
+/* Tabs 样式 */
+.pool-detail-container .ant-tabs-tab {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.pool-detail-container .ant-tabs-tab-active {
+  color: #00b96b !important;
+}
+
+.pool-detail-container .ant-tabs-ink-bar {
+  background: #00b96b;
+}
+
