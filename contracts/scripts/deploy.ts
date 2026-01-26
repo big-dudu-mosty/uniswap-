@@ -1,11 +1,19 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 
 /**
  * 部署 DEX 合约脚本
  * 部署顺序：MockERC20 → WETH9 → DEXFactory → DEXRouter
+ *
+ * 使用方法:
+ * - 本地部署: npx hardhat run scripts/deploy.ts --network localhost
+ * - Sepolia: npx hardhat run scripts/deploy.ts --network sepolia
  */
 async function main() {
+  const networkName = network.name;
+  const chainId = network.config.chainId;
+
   console.log("🚀 开始部署 DEX 合约...\n");
+  console.log(`📍 网络: ${networkName} (chainId: ${chainId})`);
 
   const [deployer] = await ethers.getSigners();
   console.log("部署账户:", deployer.address);
@@ -103,6 +111,7 @@ async function main() {
   // ==================== 5. 输出部署信息 ====================
   console.log("🎉 所有合约部署完成！\n");
   console.log("==================== 部署地址汇总 ====================");
+  console.log(`网络: ${networkName} (chainId: ${chainId})`);
   console.log("Deployer:", deployer.address);
   console.log("");
   console.log("Core Contracts:");
@@ -124,6 +133,7 @@ async function main() {
   // 生成环境变量文件
   const envContent = `# DEX 合约地址 - 由 deploy.ts 自动生成
 # 部署时间: ${new Date().toISOString()}
+# 网络: ${networkName} (chainId: ${chainId})
 
 # 核心合约
 FACTORY_ADDRESS=${factoryAddress}
@@ -146,15 +156,15 @@ DEPLOYER_ADDRESS=${deployer.address}
 
   const fs = require("fs");
   const path = require("path");
-  
+
   fs.writeFileSync(
     path.join(__dirname, "../.env.deployed"),
     envContent
   );
   console.log("✅ 合约地址已保存到 .env.deployed");
 
-  // 同步更新后端服务配置
-  console.log("\n📝 正在更新后端服务配置...");
+  // 同步更新配置文件
+  console.log("\n📝 正在更新配置文件...");
 
   // 更新配置的辅助函数
   function updateEnvFile(filePath: string, updates: Record<string, string>): boolean {
@@ -189,29 +199,50 @@ DEPLOYER_ADDRESS=${deployer.address}
     return false;
   }
 
-  // 更新 Wallet Service 配置
-  const walletEnvPath = path.join(__dirname, "../../backend/services/wallet-service/.env");
-  if (updateEnvFile(walletEnvPath, {
-    'WETH_ADDRESS': wethAddress,
-    'BLOCKCHAIN_RPC_URL': 'http://127.0.0.1:8545',
-    'BLOCKCHAIN_WS_URL': 'ws://127.0.0.1:8545',
+  // 更新前端配置
+  const frontendEnvPath = path.join(__dirname, "../../frontend/web-app/.env");
+  if (updateEnvFile(frontendEnvPath, {
+    'VITE_FACTORY_ADDRESS': factoryAddress,
+    'VITE_ROUTER_ADDRESS': routerAddress,
+    'VITE_WETH_ADDRESS': wethAddress,
+    'VITE_USDT_ADDRESS': tokenAAddress,
+    'VITE_DAI_ADDRESS': tokenBAddress,
+    'VITE_USDC_ADDRESS': tokenCAddress,
   })) {
-    console.log("✅ Wallet Service 配置已更新");
+    console.log("✅ 前端配置已更新 (frontend/web-app/.env)");
   }
 
-  // 更新 Trading Service 配置
-  const tradingEnvPath = path.join(__dirname, "../../backend/services/analytics-service/.env");
-  if (updateEnvFile(tradingEnvPath, {
+  // 更新 Analytics Service 配置
+  const analyticsEnvPath = path.join(__dirname, "../../backend/services/analytics-service/.env");
+  if (updateEnvFile(analyticsEnvPath, {
     'DEX_FACTORY_ADDRESS': factoryAddress,
     'DEX_ROUTER_ADDRESS': routerAddress,
     'WETH_ADDRESS': wethAddress,
-    'BLOCKCHAIN_RPC_URL': 'http://127.0.0.1:8545',
-    'BLOCKCHAIN_RPC_WS_URL': 'ws://127.0.0.1:8545',
   })) {
-    console.log("✅ Trading Service 配置已更新");
+    console.log("✅ Analytics Service 配置已更新");
   }
 
-  console.log("\n🎊 部署完成！现在可以开始测试了。");
+  // 更新 Wallet Service 配置 (如果存在)
+  const walletEnvPath = path.join(__dirname, "../../backend/services/wallet-service/.env");
+  if (fs.existsSync(walletEnvPath)) {
+    if (updateEnvFile(walletEnvPath, {
+      'WETH_ADDRESS': wethAddress,
+    })) {
+      console.log("✅ Wallet Service 配置已更新");
+    }
+  }
+
+  console.log("\n🎊 部署完成！");
+
+  if (networkName === 'sepolia') {
+    console.log("\n📋 Sepolia 部署后续步骤:");
+    console.log("1. 确保 MetaMask 已切换到 Sepolia 网络");
+    console.log("2. 启动后端服务: cd backend && pnpm dev");
+    console.log("3. 启动前端服务: cd frontend/web-app && pnpm dev");
+    console.log("4. 从水龙头获取测试代币进行测试");
+  } else {
+    console.log("\n现在可以开始测试了。");
+  }
 }
 
 main()
@@ -220,4 +251,3 @@ main()
     console.error(error);
     process.exit(1);
   });
-
