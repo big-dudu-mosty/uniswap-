@@ -1,6 +1,6 @@
 # 🚀 DEX 项目启动指南
 
-> 完整的一站式启动指南，5个终端窗口快速启动整个 DEX 系统
+> 完整的一站式启动指南，支持本地开发和 Sepolia 测试网部署
 
 ---
 
@@ -16,7 +16,16 @@
 
 ---
 
-## 🎬 启动步骤
+## 🔀 选择部署环境
+
+| 环境 | 说明 | 适用场景 |
+|------|------|----------|
+| **本地 Hardhat** | 本地区块链节点，交易即时确认 | 开发调试 |
+| **Sepolia 测试网** | 以太坊测试网，真实网络环境 | 测试、演示 |
+
+---
+
+# 🏠 方式一：本地 Hardhat 开发
 
 ### **Terminal 1: 启动 Docker 容器**
 
@@ -77,6 +86,7 @@ npx hardhat run scripts/add-liquidity.ts --network localhost
 **预期结果：**
 - ✅ 看到 "🎉 所有合约部署完成！"
 - ✅ `contracts/.env.deployed` 文件已更新
+- ✅ 前端和后端配置自动更新
 
 ---
 
@@ -132,9 +142,9 @@ VITE v5.0.8  ready in XXX ms
 
 ---
 
-## 🦊 配置 MetaMask
+### **配置 MetaMask (本地)**
 
-### 1. 添加 Hardhat Local 网络
+#### 1. 添加 Hardhat Local 网络
 
 在 MetaMask 中添加自定义网络：
 
@@ -145,7 +155,7 @@ Chain ID： 31337
 货币符号：  ETH
 ```
 
-### 2. 导入测试账户
+#### 2. 导入测试账户
 
 使用以下私钥导入账户：
 
@@ -157,56 +167,116 @@ Chain ID： 31337
 - 地址：`0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266`
 - 余额：10000 ETH
 
-### 3. 添加测试代币（可选）
+---
 
-在 MetaMask 中手动添加代币：
+# 🌐 方式二：Sepolia 测试网部署
 
-**USDT:**
-```
-0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
-```
+### **前置准备**
 
-**DAI:**
-```
-0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
-```
+1. **获取 Sepolia ETH**
+   - 访问水龙头: https://sepoliafaucet.com/ 或 https://faucets.chain.link/sepolia
+   - 领取测试 ETH (用于支付 Gas)
 
-**USDC:**
-```
-0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9
+2. **准备 RPC URL**
+   - Infura: https://infura.io/
+   - Alchemy: https://alchemy.com/
+
+3. **配置环境变量**
+
+   编辑 `contracts/.env`:
+   ```env
+   SEPOLIA_RPC_URL=https://sepolia.infura.io/v3/YOUR_API_KEY
+   PRIVATE_KEY=your_wallet_private_key
+   ```
+
+   编辑 `frontend/web-app/.env`:
+   ```env
+   VITE_CHAIN_ID=11155111
+   VITE_RPC_URL=https://sepolia.infura.io/v3/YOUR_API_KEY
+   ```
+
+   编辑 `backend/services/analytics-service/.env`:
+   ```env
+   BLOCKCHAIN_RPC_URL=https://sepolia.infura.io/v3/YOUR_API_KEY
+   BLOCKCHAIN_RPC_WS_URL=wss://sepolia.infura.io/ws/v3/YOUR_API_KEY
+   BLOCKCHAIN_CHAIN_ID=11155111
+   ```
+
+---
+
+### **Terminal 1: 启动 Docker 容器**
+
+```bash
+cd /home/su/dome/school/full-stack-DEX/backend
+docker-compose up -d
 ```
 
 ---
 
-## ✅ 验证系统
+### **Terminal 2: 部署合约到 Sepolia**
 
-### 1. 访问前端
+```bash
+cd /home/su/dome/school/full-stack-DEX/contracts
 
-浏览器打开：http://localhost:3000
+# 部署核心合约 (会自动更新前端和后端配置)
+npx hardhat run scripts/deploy.ts --network sepolia
 
-### 2. 连接钱包
+# 部署 Farming 合约 (可选)
+npx hardhat run scripts/deploy-farming.ts --network sepolia
 
-点击右上角「连接钱包」→ 选择 MetaMask → 连接
+# 部署 Price Oracle (可选)
+npx hardhat run scripts/deploy-oracle.ts --network sepolia
+```
 
-### 3. 查看 Pool 页面
+**⚠️ Sepolia 部署较慢，每个合约需要等待区块确认（约 12-24 秒）**
 
-访问：http://localhost:3000/pool
+**预期结果：**
+- ✅ 看到 "🎉 所有合约部署完成！"
+- ✅ 显示所有合约地址
+- ✅ 前端和后端配置自动更新
 
-应该看到 3 个交易对：
-- USDT/DAI
-- USDT/USDC
-- DAI/WETH
+---
 
-### 4. 测试 Swap
+### **Terminal 3: 启动后端服务**
 
-访问：http://localhost:3000/swap
+```bash
+cd /home/su/dome/school/full-stack-DEX/backend/services/analytics-service
+pnpm run start:dev
+```
 
-1. 选择代币对（如 USDT → DAI）
-2. 输入金额（如 100）
-3. 看到预期输出
-4. 点击「授权」→ MetaMask 签名
-5. 点击「Swap」→ MetaMask 签名
-6. 等待交易确认
+---
+
+### **Terminal 4: 同步池子数据**
+
+```bash
+cd /home/su/dome/school/full-stack-DEX
+bash scripts/sync-all-pools.sh
+```
+
+---
+
+### **Terminal 5: 启动前端应用**
+
+```bash
+cd /home/su/dome/school/full-stack-DEX/frontend/web-app
+pnpm run dev
+```
+
+---
+
+### **配置 MetaMask (Sepolia)**
+
+#### 1. 切换到 Sepolia 网络
+
+MetaMask 默认支持 Sepolia，直接切换即可：
+- 点击网络下拉菜单
+- 选择 "Sepolia 测试网络"
+
+#### 2. 添加测试代币
+
+部署完成后，在 MetaMask 中导入代币：
+- 查看 `contracts/.env.deployed` 获取代币地址
+- MetaMask → 导入代币 → 输入合约地址
 
 ---
 
@@ -214,12 +284,48 @@ Chain ID： 31337
 
 | 服务 | 端口 | 访问地址 | 状态 |
 |------|------|---------|------|
-| **Hardhat 节点** | 8545 | http://localhost:8545 | 🟢 必须运行 |
+| **Hardhat 节点** | 8545 | http://localhost:8545 | 🟢 仅本地模式 |
 | **后端 API** | 3002 | http://localhost:3002 | 🟢 必须运行 |
 | **API 文档** | 3002 | http://localhost:3002/api/docs | 📚 可访问 |
 | **前端应用** | 3000 | http://localhost:3000 | 🟢 必须运行 |
 | **PostgreSQL** | 5432 | - | 🟢 Docker |
 | **Redis** | 6379 | - | 🟢 Docker |
+
+---
+
+## 🔄 环境切换
+
+### 从本地切换到 Sepolia
+
+1. 修改 `frontend/web-app/.env`:
+   ```env
+   VITE_CHAIN_ID=11155111
+   ```
+
+2. 修改 `backend/services/analytics-service/.env`:
+   ```env
+   BLOCKCHAIN_CHAIN_ID=11155111
+   ```
+
+3. 重启前端和后端服务
+
+4. MetaMask 切换到 Sepolia 网络
+
+### 从 Sepolia 切换到本地
+
+1. 修改 `frontend/web-app/.env`:
+   ```env
+   VITE_CHAIN_ID=31337
+   ```
+
+2. 修改 `backend/services/analytics-service/.env`:
+   ```env
+   BLOCKCHAIN_CHAIN_ID=31337
+   ```
+
+3. 启动 Hardhat 节点并重新部署
+
+4. MetaMask 切换到 Hardhat Local 网络
 
 ---
 
@@ -247,48 +353,31 @@ bash scripts/sync-all-pools.sh
 
 ---
 
-### Q2: Pool 页面没有数据？
+### Q2: Sepolia 部署失败 "insufficient funds"？
+
+**A:** 钱包没有足够的 Sepolia ETH：
+1. 访问水龙头获取测试 ETH
+2. 确认钱包地址正确
+3. 等待 ETH 到账后重试
+
+---
+
+### Q3: Sepolia 交易一直 pending？
+
+**A:** Sepolia 网络拥堵或 Gas 设置过低：
+1. 等待几分钟
+2. 在 MetaMask 中加速交易
+3. 或取消后重试
+
+---
+
+### Q4: Pool 页面没有数据？
 
 **A:** 运行同步脚本：
 
 ```bash
 cd /home/su/dome/school/full-stack-DEX
 bash scripts/sync-all-pools.sh
-```
-
----
-
-### Q3: 前端看不到代币余额？
-
-**A:** 检查以下配置：
-
-1. **确认 .env 文件存在：**
-   ```bash
-   cat /home/su/dome/school/full-stack-DEX/frontend/web-app/.env
-   ```
-
-2. **确认合约地址正确**
-
-3. **重启前端服务：**
-   ```bash
-   # Terminal 6: Ctrl + C 停止
-   pnpm run dev  # 重新启动
-   ```
-
----
-
-### Q4: 后端报错 "connect EADDRNOTAVAIL"？
-
-**A:** 检查 Vite 代理配置：
-
-确认 `frontend/web-app/vite.config.ts` 中：
-```typescript
-proxy: {
-  '/api/v1': {
-    target: 'http://localhost:3002',  // 应该是 3002 不是 3001
-    changeOrigin: true,
-  },
-}
 ```
 
 ---
@@ -305,13 +394,13 @@ MetaMask → 设置 → 高级 → 重置账户
 
 **A:** 该交易对还没有流动性。解决方法：
 
-1. **添加流动性：**
+1. **本地环境：**
    ```bash
    cd contracts
    npx hardhat run scripts/add-liquidity.ts --network localhost
    ```
 
-2. **或者选择已有流动性的交易对进行测试**
+2. **Sepolia 环境：** 手动在前端添加流动性
 
 ---
 
@@ -330,32 +419,8 @@ docker-compose down
 
 ---
 
-## 💡 开发建议
-
-### 1. 使用多终端管理工具
-
-推荐使用 `tmux` 或 `screen` 管理多个终端窗口。
-
-### 2. 保存 Hardhat 账户信息
-
-将测试账户的私钥保存好，方便每次导入 MetaMask。
-
-### 3. 检查日志
-
-- **后端日志：** Terminal 4
-- **前端日志：** Terminal 6
-- **合约日志：** Terminal 2
-
-### 4. 定期清理
-
-Hardhat 节点数据存在内存中，重启后会清空，无需手动清理。
-
----
-
 ## 📚 相关文档
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - 架构说明
-- [README.md](./README.md) - 项目概览
 - [contracts/.env.deployed](./contracts/.env.deployed) - 合约地址
 - [API 文档](http://localhost:3002/api/docs) - 后端 API 文档
 
@@ -363,26 +428,16 @@ Hardhat 节点数据存在内存中，重启后会清空，无需手动清理。
 
 ## 🎉 完成！
 
-现在你的 DEX 项目已经完全运行起来了！
-
 **快速测试清单：**
 - [ ] Docker 容器运行中
-- [ ] Hardhat 节点运行中
 - [ ] 后端服务运行中（端口 3002）
 - [ ] 前端服务运行中（端口 3000）
-- [ ] MetaMask 已配置并连接
-- [ ] Pool 页面能看到 3 个交易对
+- [ ] MetaMask 已配置并连接正确网络
+- [ ] Pool 页面能看到交易对
 - [ ] Swap 页面能看到代币余额
 - [ ] 能成功执行一笔 Swap 交易
 
 ---
 
-**最后更新：** 2026-01-15
+**最后更新：** 2026-01-22
 **维护者：** DEX Team
-
----
-
-**有问题？**
-1. 查看本文档的「常见问题」部分
-2. 检查终端日志输出
-3. 确认所有服务正常运行

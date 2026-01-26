@@ -1,40 +1,40 @@
 {
   "network": "hardhat",
-  "timestamp": "2026-01-19T03:45:35.335Z",
-  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "timestamp": "2026-01-23T14:14:05.147Z",
+  "deployer": "0xF344DC8d71f752D87Ef1c8662aF671973010249f",
   "contracts": {
     "PriceOracle": {
-      "address": "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0",
-      "owner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      "address": "0xeD3D83702F8622E53d64A54EFbe1e6D677098d74",
+      "owner": "0xF344DC8d71f752D87Ef1c8662aF671973010249f",
       "maxPriceAge": "3600",
       "strictMode": false
     },
     "Aggregators": [
       {
         "symbol": "DAI",
-        "address": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
-        "tokenAddress": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+        "address": "0x79EAe8967144F0e9CAEbE16E4AF2b753aFb95c78",
+        "tokenAddress": "0x81c9dC0b00b80f4f336F7CE353614F2ce3b64Fc2",
         "initialPrice": "1.00",
         "decimals": 8
       },
       {
         "symbol": "USDT",
-        "address": "0x9A676e781A523b5d0C0e43731313A708CB607508",
-        "tokenAddress": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+        "address": "0x68957854152229e9c32B34711Db0a0C84DeC0a9F",
+        "tokenAddress": "0x9957F598c2954b4d759bC9f77E7107C845289775",
         "initialPrice": "1.00",
         "decimals": 8
       },
       {
         "symbol": "USDC",
-        "address": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
-        "tokenAddress": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+        "address": "0x13c69f9899Ff21fE76C8eeE54686b7d84E41D7A5",
+        "tokenAddress": "0x2b90D2Ee55146E235113745AD78d5A11Aebd56b1",
         "initialPrice": "1.00",
         "decimals": 8
       },
       {
         "symbol": "WETH",
-        "address": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
-        "tokenAddress": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        "address": "0x7500649d13687Da42D89808B14E93d3BA7c6Ba9B",
+        "tokenAddress": "0x52C1FB1B403C9342B6bC0aE30AF26c0487d4c042",
         "initialPrice": "2000.00",
         "decimals": 8
       }
@@ -42,23 +42,23 @@
   },
   "priceFeeds": {
     "DAI": {
-      "token": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-      "feed": "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82",
+      "token": "0x81c9dC0b00b80f4f336F7CE353614F2ce3b64Fc2",
+      "feed": "0x79EAe8967144F0e9CAEbE16E4AF2b753aFb95c78",
       "initialPrice": "1.00"
     },
     "USDT": {
-      "token": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
-      "feed": "0x9A676e781A523b5d0C0e43731313A708CB607508",
+      "token": "0x9957F598c2954b4d759bC9f77E7107C845289775",
+      "feed": "0x68957854152229e9c32B34711Db0a0C84DeC0a9F",
       "initialPrice": "1.00"
     },
     "USDC": {
-      "token": "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-      "feed": "0x0B306BF915C4d645ff596e518fAf3F9669b97016",
+      "token": "0x2b90D2Ee55146E235113745AD78d5A11Aebd56b1",
+      "feed": "0x13c69f9899Ff21fE76C8eeE54686b7d84E41D7A5",
       "initialPrice": "1.00"
     },
     "WETH": {
-      "token": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-      "feed": "0x959922bE3CAee4b8Cd9a407cc3ac1C251C2007B1",
+      "token": "0x52C1FB1B403C9342B6bC0aE30AF26c0487d4c042",
+      "feed": "0x7500649d13687Da42D89808B14E93d3BA7c6Ba9B",
       "initialPrice": "2000.00"
     }
   }
