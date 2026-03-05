@@ -31,8 +31,11 @@ const createApiClient = (baseURL: string): AxiosInstance => {
       return response.data
     },
     (error) => {
-      const errorMessage = error.response?.data?.message || error.message || '请求失败'
-      message.error(errorMessage)
+      // 404 错误不弹提示（池子不存在是正常情况）
+      if (error.response?.status !== 404) {
+        const errorMessage = error.response?.data?.message || error.message || '请求失败'
+        message.error(errorMessage)
+      }
       return Promise.reject(error)
     }
   )
@@ -54,6 +57,17 @@ export const tradingApi = createApiClient(API_CONFIG.TRADING_SERVICE)
  * API 服务类
  */
 export const apiService = {
+  // ==================== Token ====================
+
+  /**
+   * 注册代币到后端（价格追踪）
+   */
+  trackToken: async (tokenAddress: string, symbol?: string): Promise<any> => {
+    return tradingApi.post('/price/track', { tokenAddress, symbol }).catch(() => {
+      // 注册失败不影响前端功能
+    })
+  },
+
   // ==================== Balance ====================
   
   /**

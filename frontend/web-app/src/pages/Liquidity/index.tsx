@@ -60,7 +60,6 @@ const LiquidityPage: React.FC = () => {
   const [userPositions, setUserPositions] = useState<UserLPPosition[]>([])
   const [selectedPosition, setSelectedPosition] = useState<UserLPPosition | null>(null)
   const [removePercent, setRemovePercent] = useState<number>(50)
-  const [loadingPositions, setLoadingPositions] = useState(false)
 
   // UI 状态
   const [activeTab, setActiveTab] = useState('add')
@@ -71,49 +70,39 @@ const LiquidityPage: React.FC = () => {
   const [lpTokens, setLpTokens] = useState<string>('0')
   const [shareOfPool, setShareOfPool] = useState<string>('0')
 
+  // 读取 tokenA / tokenB 余额
+  const balanceContracts = [tokenA, tokenB]
+    .filter((t): t is Token => !!t)
+    .map((token) => ({
+      address: token.address as `0x${string}`,
+      abi: ERC20ABI.abi as any,
+      functionName: 'balanceOf',
+      args: [accountAddress as `0x${string}`],
+    }))
+
+  const { data: selectedTokenBalances } = useReadContracts({
+    contracts: balanceContracts,
+    query: {
+      enabled: !!accountAddress && balanceContracts.length > 0,
+    },
+  })
+
+  const getTokenBalance = (index: number, token: Token | null): string => {
+    if (!token || !selectedTokenBalances) return '--'
+    // index needs to account for which tokens are present
+    const actualIndex = tokenA ? index : index - 1
+    const data = selectedTokenBalances[actualIndex]
+    if (data && data.status === 'success' && data.result) {
+      return formatNumber(formatUnits(data.result as bigint, token.decimals), 6)
+    }
+    return '0'
+  }
+
   // 池子信息
   const [poolInfo, setPoolInfo] = useState<any>(null)
   const [loadingPool, setLoadingPool] = useState(false)
   const [poolPrice, setPoolPrice] = useState<string>('')
   const [isNewPool, setIsNewPool] = useState(false)
-
-  /**
-   * 获取用户的 LP 仓位
-   */
-  const fetchUserPositions = async () => {
-    if (!accountAddress) return
-
-    setLoadingPositions(true)
-    try {
-      // 获取所有池子
-      const poolsResponse = await apiService.getPools()
-      const pools = poolsResponse.pools || []
-
-      // 获取用户在每个池子的 LP 余额
-      const positions: UserLPPosition[] = []
-
-      for (const pool of pools) {
-        if (!pool.pairAddress) continue
-
-        try {
-          // 直接调用合约获取 LP 余额
-          const response = await fetch(`/api/v1/pool/${pool.id}`)
-          const poolData = await response.json()
-
-          // 我们需要从链上读取用户的 LP 余额
-          // 这里简化处理，通过 API 获取
-        } catch (err) {
-          console.error(`Failed to get LP balance for pool ${pool.id}:`, err)
-        }
-      }
-
-      setUserPositions(positions)
-    } catch (error) {
-      console.error('Failed to fetch user positions:', error)
-    } finally {
-      setLoadingPositions(false)
-    }
-  }
 
   // 获取所有池子用于读取 LP 余额
   const [allPools, setAllPools] = useState<any[]>([])
@@ -133,7 +122,7 @@ const LiquidityPage: React.FC = () => {
   // 准备 LP Token 余额查询
   const lpBalanceContracts = allPools.map((pool) => ({
     address: pool.pairAddress as `0x${string}`,
-    abi: ERC20ABI.abi,
+    abi: ERC20ABI.abi as any,
     functionName: 'balanceOf',
     args: [accountAddress as `0x${string}`],
   }))
@@ -381,6 +370,8 @@ const LiquidityPage: React.FC = () => {
         amountAMin,
         amountBMin,
         deadline,
+        tokenASymbol: tokenA.symbol,
+        tokenBSymbol: tokenB.symbol,
       })
 
       if (hash) {
@@ -499,7 +490,7 @@ const LiquidityPage: React.FC = () => {
           <Text type="secondary">代币 A</Text>
           {isConnected && tokenA && (
             <Text type="secondary" style={{ fontSize: 12 }}>
-              余额: --
+              余额: {getTokenBalance(0, tokenA)}
             </Text>
           )}
         </div>
@@ -550,7 +541,7 @@ const LiquidityPage: React.FC = () => {
           <Text type="secondary">代币 B</Text>
           {isConnected && tokenB && (
             <Text type="secondary" style={{ fontSize: 12 }}>
-              余额: --
+              余额: {getTokenBalance(1, tokenB)}
             </Text>
           )}
         </div>

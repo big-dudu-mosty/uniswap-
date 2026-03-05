@@ -316,8 +316,18 @@ export class QuoteService {
     const priceImpactNum = parseFloat(baseQuote.priceImpact);
     const recommendation = this.getRecommendation(priceImpactNum, liquidityDepth);
 
-    // 6. 执行价格
-    const executionPrice = this.calculatePrice(amountOutBigInt, amountInBigInt);
+    // 6. 执行价格（考虑代币精度差异）
+    const [tokenInInfo, tokenOutInfo] = await Promise.all([
+      this.blockchainProvider.getTokenInfo(tokenIn as any),
+      this.blockchainProvider.getTokenInfo(tokenOut as any),
+    ]);
+    const decimalsIn = tokenInInfo.decimals;
+    const decimalsOut = tokenOutInfo.decimals;
+    const humanAmountIn = Number(amountInBigInt) / 10 ** decimalsIn;
+    const humanAmountOut = Number(amountOutBigInt) / 10 ** decimalsOut;
+    const executionPrice = humanAmountIn > 0
+      ? (humanAmountOut / humanAmountIn).toFixed(18)
+      : '0';
 
     return {
       tokenIn,

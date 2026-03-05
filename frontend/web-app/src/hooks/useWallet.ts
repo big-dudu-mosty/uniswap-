@@ -18,7 +18,7 @@ export const useWallet = () => {
     setConnected,
     setDisconnected,
     setEthBalance,
-    address: storedAddress,
+    address: _storedAddress,
   } = useWalletStore()
   
   // 获取 ETH 余额

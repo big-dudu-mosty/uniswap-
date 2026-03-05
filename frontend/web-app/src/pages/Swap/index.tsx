@@ -25,7 +25,6 @@ import { parseUnits, formatUnits, parseAbi, Address } from 'viem'
 import { usePublicClient } from 'wagmi'
 import { useWallet } from '../../hooks/useWallet'
 import { useSwap } from '../../hooks/useSwap'
-import { useTokenValue } from '../../hooks/usePriceOracle'
 import TokenSelect from '../../components/TokenSelect'
 import SlippageSettings from '../../components/SlippageSettings'
 import ConfirmSwapModal from '../../components/ConfirmSwapModal'
@@ -39,7 +38,7 @@ import './index.css'
 const { Title, Text } = Typography
 
 const SwapPage: React.FC = () => {
-  const { address, isConnected, balance } = useWallet()
+  const { address, isConnected, balance, chainId, switchToHardhat } = useWallet()
   const { swapExactTokensForTokens, loading: swapLoading } = useSwap()
   const publicClient = usePublicClient()
 
@@ -71,6 +70,12 @@ const SwapPage: React.FC = () => {
   
   // 🚀 Phase 4: 交易确认弹窗
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+
+  // 全局统计数据
+  const [globalStats, setGlobalStats] = useState<{ volume24h: string; totalTVL: string }>({
+    volume24h: '0',
+    totalTVL: '0',
+  })
 
   // ERC20 ABI
   const erc20Abi = parseAbi([
@@ -138,6 +143,24 @@ const SwapPage: React.FC = () => {
   useEffect(() => {
     updateBalances()
   }, [tokenIn, tokenOut, address, isConnected])
+
+  // 获取全局统计数据
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const overview = await apiService.getAnalyticsOverview()
+        if (overview) {
+          setGlobalStats({
+            volume24h: overview.volume24h || '0',
+            totalTVL: overview.totalTVL || '0',
+          })
+        }
+      } catch {
+        // 静默失败，保留默认值
+      }
+    }
+    fetchStats()
+  }, [])
 
   /**
    * 🚀 Phase 4: 获取增强报价
@@ -248,6 +271,12 @@ const SwapPage: React.FC = () => {
   const handleSwap = async () => {
     if (!isConnected || !address) {
       message.warning('请先连接钱包')
+      return
+    }
+
+    if (chainId !== 31337) {
+      message.warning('请在 MetaMask 中切换到 Hardhat Local 网络 (Chain ID: 31337)')
+      switchToHardhat()
       return
     }
 
@@ -374,18 +403,18 @@ const SwapPage: React.FC = () => {
           </Text>
         </div>
         <Space>
-          <Statistic 
-            title="24h 交易量" 
-            value="$--" 
+          <Statistic
+            title="24h 交易量"
+            value={formatNumber(globalStats.volume24h, 2)}
             valueStyle={{ fontSize: 16 }}
-            prefix="💰"
+            prefix="$"
           />
           <Divider type="vertical" style={{ height: 40 }} />
-          <Statistic 
-            title="流动性" 
-            value="$--" 
+          <Statistic
+            title="流动性"
+            value={formatNumber(globalStats.totalTVL, 2)}
             valueStyle={{ fontSize: 16 }}
-            prefix="💎"
+            prefix="$"
           />
         </Space>
       </div>

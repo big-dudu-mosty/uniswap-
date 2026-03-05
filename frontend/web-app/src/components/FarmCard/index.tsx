@@ -54,7 +54,7 @@ const FarmCard: React.FC<FarmCardProps> = ({
   // 查询用户的 LP Token 余额
   const { data: lpBalance } = useReadContract({
     address: lpToken.address as `0x${string}`,
-    abi: ERC20ABI.abi,
+    abi: ERC20ABI.abi as any,
     functionName: 'balanceOf',
     args: [address as `0x${string}`],
     query: {
@@ -75,7 +75,7 @@ const FarmCard: React.FC<FarmCardProps> = ({
 
   const aprValue = parseFloat(apr)
   const lpBalanceFormatted = lpBalance ? formatUnits(lpBalance as bigint, 18) : '0'
-  const hasLpBalance = lpBalance && (lpBalance as bigint) > 0n
+  const hasLpBalance = lpBalance ? (lpBalance as bigint) > 0n : false
 
   return (
     <Card

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Typography, Button, Space, Avatar, Empty, Spin, Alert, Badge, Row, Col, Statistic } from 'antd'
-import { ReloadOutlined, PlusOutlined, InfoCircleOutlined, WifiOutlined, RiseOutlined, FallOutlined } from '@ant-design/icons'
+import { ReloadOutlined, PlusOutlined, InfoCircleOutlined, WifiOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { apiService } from '../../services/api'
 import { formatNumber } from '../../utils/format'
@@ -170,17 +170,10 @@ const PoolPage: React.FC = () => {
    * 计算流动性价值（USD）
    */
   const calculateLiquidityUsd = (pool: Pool): string => {
-    // 使用后端返回的 liquidityUsd
-    if (pool.liquidityUsd && !pool.liquidityUsd.includes('e')) {
+    if (pool.liquidityUsd && !pool.liquidityUsd.includes('e') && parseFloat(pool.liquidityUsd) > 0) {
       return formatNumber(pool.liquidityUsd, 2)
     }
-    // 备用：从储备量计算
-    const decimals0 = pool.token0Decimals || 18
-    const decimals1 = pool.token1Decimals || 18
-    const reserve0 = parseFloat(pool.reserve0 || '0') / Math.pow(10, decimals0)
-    const reserve1 = parseFloat(pool.reserve1 || '0') / Math.pow(10, decimals1)
-    const tvl = reserve0 + reserve1
-    return formatNumber(tvl.toString(), 2)
+    return '--'
   }
 
   /**

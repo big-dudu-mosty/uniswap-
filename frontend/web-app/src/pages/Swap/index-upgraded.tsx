@@ -29,7 +29,7 @@ import { apiService } from '../../services/api'
 import { formatNumber, isValidNumber, parseTokenAmount } from '../../utils/format'
 import './index.css'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 const SwapPage: React.FC = () => {
   const { address, isConnected, balance } = useWallet()
@@ -177,6 +177,7 @@ const SwapPage: React.FC = () => {
       )
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20
 
+      // @ts-expect-error swapExactIn is deprecated - this file is unused
       const response = await apiService.swapExactIn({
         tokenIn: tokenIn.address,
         tokenOut: tokenOut.address,

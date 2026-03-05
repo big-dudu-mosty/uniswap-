@@ -37,7 +37,7 @@ const FarmDetail: React.FC = () => {
 
   const [loading, setLoading] = useState(true)
   const [farmData, setFarmData] = useState<any>(null)
-  const [userData, setUserData] = useState<any>(null)
+  const [_userData, setUserData] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
   const [depositAmount, setDepositAmount] = useState('')
   const [withdrawAmount, setWithdrawAmount] = useState('')

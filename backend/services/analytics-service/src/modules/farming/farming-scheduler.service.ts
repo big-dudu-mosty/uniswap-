@@ -40,16 +40,11 @@ export class FarmingSchedulerService {
     this.logger.debug('Running scheduled task: updateAllPools');
 
     try {
+      // 使用 syncAllPoolsFromChain 从链上读取 poolLength，
+      // 确保新加入 MasterChef 的池子也能被发现和同步
+      await this.farmingService.syncAllPoolsFromChain();
+
       const farms = await this.farmRepository.find({ where: { active: true } });
-
-      for (const farm of farms) {
-        try {
-          await this.farmingService.syncPoolFromChain(farm.poolId);
-        } catch (error) {
-          this.logger.error(`Failed to sync pool ${farm.poolId}:`, error.message);
-        }
-      }
-
       this.logger.log(`✅ Updated ${farms.length} farming pools`);
     } catch (error) {
       this.logger.error('Error in updateAllPools:', error);

@@ -218,6 +218,7 @@ DEPLOYER_ADDRESS=${deployer.address}
     'DEX_FACTORY_ADDRESS': factoryAddress,
     'DEX_ROUTER_ADDRESS': routerAddress,
     'WETH_ADDRESS': wethAddress,
+    'TRADING_PRIVATE_KEY': '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80',
   })) {
     console.log("✅ Analytics Service 配置已更新");
   }

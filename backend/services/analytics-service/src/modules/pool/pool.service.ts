@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like, MoreThanOrEqual } from 'typeorm';
 import { Pool } from './entities/pool.entity';
@@ -6,6 +6,7 @@ import { SwapHistory } from '../history/entities/swap-history.entity';
 import { BlockchainProvider } from '../../providers/blockchain/blockchain.provider';
 import { CacheProvider } from '../../providers/cache/cache.provider';
 import { ConfigService } from '@nestjs/config';
+import { PriceService } from '../price/price.service';
 import {
   CreatePoolDto,
   PoolListQueryDto,
@@ -32,6 +33,8 @@ export class PoolService {
     private readonly blockchainProvider: BlockchainProvider,
     private readonly cacheProvider: CacheProvider,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => PriceService))
+    private readonly priceService: PriceService,
   ) {
     this.cacheTtl = this.configService.get<number>('cache.ttl', 300);
   }
@@ -120,6 +123,16 @@ export class PoolService {
     pool.isVerified = false;
 
     await this.poolRepository.save(pool);
+
+    // 自动注册代币到 token_prices 表（用于价格追踪）
+    await Promise.all([
+      this.priceService.addTokenForPriceTracking(token0, token0Info.symbol).catch(err => {
+        this.logger.warn(`Failed to register token ${token0Info.symbol} for price tracking: ${err.message}`);
+      }),
+      this.priceService.addTokenForPriceTracking(token1, token1Info.symbol).catch(err => {
+        this.logger.warn(`Failed to register token ${token1Info.symbol} for price tracking: ${err.message}`);
+      }),
+    ]);
 
     this.logger.log(`Pool created: ${pairAddress}`);
     return pool;

@@ -36,7 +36,7 @@ export const useSwap = () => {
     amount: bigint
   ): Promise<boolean> => {
     if (!walletClient) {
-      message.error('请先连接钱包')
+      message.error('钱包未就绪，请确认 MetaMask 已切换到 Hardhat Local 网络 (Chain ID: 31337)')
       return false
     }
 
@@ -124,7 +124,7 @@ export const useSwap = () => {
     deadline: number
   }) => {
     if (!walletClient) {
-      message.error('请先连接钱包')
+      message.error('钱包未就绪，请确认 MetaMask 已切换到 Hardhat Local 网络 (Chain ID: 31337)')
       return null
     }
 

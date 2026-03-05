@@ -2,12 +2,33 @@
 // 用法: npx hardhat run scripts/mint-tokens.js --network localhost [address]
 
 const hre = require("hardhat");
+const fs = require("fs");
+const path = require("path");
 
 async function main() {
-  // 获取部署的合约地址
-  const USDT_ADDRESS = process.env.USDT_ADDRESS || '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
-  const DAI_ADDRESS = process.env.DAI_ADDRESS || '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0';
-  const USDC_ADDRESS = process.env.USDC_ADDRESS || '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9';
+  // 从 .env.deployed 读取合约地址
+  const envDeployedPath = path.join(__dirname, "../.env.deployed");
+  let envVars = {};
+
+  if (fs.existsSync(envDeployedPath)) {
+    const content = fs.readFileSync(envDeployedPath, "utf8");
+    content.split('\n').forEach(line => {
+      const match = line.match(/^(\w+)=(\S+)/);
+      if (match) envVars[match[1]] = match[2];
+    });
+    console.log('📂 从 .env.deployed 读取合约地址');
+  } else {
+    console.log('⚠️  .env.deployed 不存在，使用环境变量或默认值');
+  }
+
+  const USDT_ADDRESS = envVars.USDT_ADDRESS || process.env.USDT_ADDRESS;
+  const DAI_ADDRESS = envVars.DAI_ADDRESS || process.env.DAI_ADDRESS;
+  const USDC_ADDRESS = envVars.USDC_ADDRESS || process.env.USDC_ADDRESS;
+
+  if (!USDT_ADDRESS || !DAI_ADDRESS || !USDC_ADDRESS) {
+    console.error('❌ 缺少代币地址！请先运行 deploy.ts 部署合约');
+    process.exit(1);
+  }
   
   // 目标地址（从命令行参数获取，或使用默认账户）
   const targetAddress = process.argv[2] || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';

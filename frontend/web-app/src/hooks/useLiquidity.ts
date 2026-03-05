@@ -35,7 +35,8 @@ export const useLiquidity = () => {
    */
   const checkAndApprove = async (
     tokenAddress: string,
-    amount: bigint
+    amount: bigint,
+    tokenSymbol?: string
   ): Promise<boolean> => {
     if (!walletClient) {
       message.error('请先连接钱包')
@@ -59,7 +60,7 @@ export const useLiquidity = () => {
       }
 
       // 请求授权
-      message.info(`正在请求代币授权...`)
+      message.info(`正在请求 ${tokenSymbol || '代币'} 授权...`)
       
       const hash = await walletClient.writeContract({
         address: tokenAddress as Address,
@@ -69,7 +70,7 @@ export const useLiquidity = () => {
         gas: 100000n, // 显式设置 gas limit
       })
 
-      message.loading({ content: '授权交易已提交，等待确认...', key: 'approve', duration: 0 })
+      message.loading({ content: `${tokenSymbol || '代币'} 授权交易已提交，等待确认...`, key: 'approve', duration: 0 })
       
       // 等待交易确认（本地网络快速确认）
       // 设置超时时间为 30 秒
@@ -84,7 +85,7 @@ export const useLiquidity = () => {
       
       await Promise.race([receiptPromise, timeoutPromise])
       
-      message.success({ content: '✅ 授权成功！', key: 'approve' })
+      message.success({ content: `✅ ${tokenSymbol || '代币'} 授权成功！`, key: 'approve' })
       return true
     } catch (error: any) {
       console.error('Approval failed:', error)
@@ -128,13 +129,15 @@ export const useLiquidity = () => {
     amountAMin: bigint
     amountBMin: bigint
     deadline: number
+    tokenASymbol?: string
+    tokenBSymbol?: string
   }) => {
     if (!walletClient) {
       message.error('请先连接钱包')
       return null
     }
 
-    const { tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, deadline } = params
+    const { tokenA, tokenB, amountADesired, amountBDesired, amountAMin, amountBMin, deadline, tokenASymbol, tokenBSymbol } = params
 
     // 检查是否涉及 ETH
     const isTokenAETH = isWETH(tokenA)
@@ -153,15 +156,16 @@ export const useLiquidity = () => {
         const amountETHMin = isTokenAETH ? amountAMin : amountBMin
 
         // 1. 只需要授权 ERC20 代币（ETH 不需要授权）
-        message.info('授权代币...')
-        const approved = await checkAndApprove(token, amountTokenDesired)
+        const erc20Symbol = isTokenAETH ? tokenBSymbol : tokenASymbol
+        message.info(`授权 ${erc20Symbol || '代币'}...`)
+        const approved = await checkAndApprove(token, amountTokenDesired, erc20Symbol)
         if (!approved) {
           setLoading(false)
           return null
         }
 
         // 2. 调用 addLiquidityETH
-        message.info('正在添加流动性 (ETH + ERC20)...')
+        message.info(`正在添加 ETH + ${erc20Symbol || 'ERC20'} 流动性...`)
         
         const hash = await walletClient.writeContract({
           address: routerAddress,
@@ -176,7 +180,7 @@ export const useLiquidity = () => {
             BigInt(deadline),
           ],
           value: amountETHDesired, // 发送 ETH
-          gas: 250000n, // 显式设置 gas limit
+          gas: 5000000n, // 创建新池子需要部署合约，需要更多 gas
         })
 
         message.loading({ content: '添加流动性交易已提交...', key: 'addLiq', duration: 0 })
@@ -213,24 +217,24 @@ export const useLiquidity = () => {
       // 情况2: ERC20 + ERC20
       else {
         // 1. 授权 TokenA
-        message.info('授权代币 A...')
-        const approvedA = await checkAndApprove(tokenA, amountADesired)
+        message.info(`授权 ${tokenASymbol || '代币 A'}...`)
+        const approvedA = await checkAndApprove(tokenA, amountADesired, tokenASymbol)
         if (!approvedA) {
           setLoading(false)
           return null
         }
 
         // 2. 授权 TokenB
-        message.info('授权代币 B...')
-        const approvedB = await checkAndApprove(tokenB, amountBDesired)
+        message.info(`授权 ${tokenBSymbol || '代币 B'}...`)
+        const approvedB = await checkAndApprove(tokenB, amountBDesired, tokenBSymbol)
         if (!approvedB) {
           setLoading(false)
           return null
         }
 
         // 3. 添加流动性
-        message.info('正在添加流动性 (ERC20 + ERC20)...')
-        
+        message.info(`正在添加 ${tokenASymbol || '代币A'} + ${tokenBSymbol || '代币B'} 流动性...`)
+
         const hash = await walletClient.writeContract({
           address: routerAddress,
           abi: routerAbi,
@@ -245,7 +249,7 @@ export const useLiquidity = () => {
             walletClient.account.address,
             BigInt(deadline),
           ],
-          gas: 250000n, // 显式设置 gas limit
+          gas: 5000000n, // 创建新池子需要部署合约，需要更多 gas
         })
 
         message.loading({ content: '添加流动性交易已提交...', key: 'addLiq', duration: 0 })

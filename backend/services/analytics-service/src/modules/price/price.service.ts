@@ -8,6 +8,9 @@ import { hardhat } from 'viem/chains';
 import { TokenPrice } from './entities/token-price.entity';
 import { TokenPriceDto, AllPricesResponseDto } from './dto/price.dto';
 
+// 需要注入 Pool Repository 来做 AMM 推算
+import { Pool } from '../pool/entities/pool.entity';
+
 /**
  * PriceService
  * 
@@ -44,6 +47,8 @@ export class PriceService {
   constructor(
     @InjectRepository(TokenPrice)
     private readonly tokenPriceRepository: Repository<TokenPrice>,
+    @InjectRepository(Pool)
+    private readonly poolRepository: Repository<Pool>,
     private readonly configService: ConfigService,
   ) {
     const rpcUrl = this.configService.get<string>('BLOCKCHAIN_RPC_URL', 'http://127.0.0.1:8545');
@@ -252,6 +257,9 @@ export class PriceService {
 
       this.lastRefreshTime = new Date();
       this.logger.debug(`✅ Prices refreshed: ${tokens.length} tokens`);
+
+      // 对没有 Oracle 价格源的代币，通过 AMM 池子推算价格
+      await this.deriveAmmPrices();
     } catch (error) {
       this.logger.error('Failed to refresh prices:', error);
     }
@@ -349,6 +357,93 @@ export class PriceService {
     this.priceCache.set(tokenAddressLower, dto);
 
     this.logger.debug(`💰 ${symbol}: $${priceUsd}`);
+  }
+
+  /**
+   * AMM 推算价格：通过池子储备比例推算没有 Oracle 价格源的代币价格
+   *
+   * 逻辑：如果代币 A 没有价格，但它跟代币 B 有交易对，
+   * 而代币 B 有已知价格，则 A 的价格 = (reserveB / reserveA) * priceB
+   */
+  private async deriveAmmPrices(): Promise<void> {
+    // 收集已知价格的代币
+    const knownPrices = new Map<string, number>();
+    for (const [addr, dto] of this.priceCache.entries()) {
+      const price = parseFloat(dto.priceUsd);
+      if (price > 0) {
+        knownPrices.set(addr, price);
+      }
+    }
+
+    if (knownPrices.size === 0) return;
+
+    // 找出没有价格的代币
+    const tokens = await this.tokenPriceRepository.find({ where: { isActive: true } });
+    const unknownTokens = tokens.filter(t => !knownPrices.has(t.tokenAddress));
+
+    if (unknownTokens.length === 0) return;
+
+    // 获取所有活跃的池子
+    const pools = await this.poolRepository.find({ where: { isActive: true } });
+
+    for (const token of unknownTokens) {
+      const tokenAddr = token.tokenAddress;
+
+      // 在池子中找到包含此代币和已知价格代币的池子
+      for (const pool of pools) {
+        const addr0 = pool.token0Address?.toLowerCase();
+        const addr1 = pool.token1Address?.toLowerCase();
+
+        if (!addr0 || !addr1) continue;
+
+        let knownAddr: string | null = null;
+        let isToken0Unknown = false;
+
+        if (addr0 === tokenAddr && knownPrices.has(addr1)) {
+          knownAddr = addr1;
+          isToken0Unknown = true;
+        } else if (addr1 === tokenAddr && knownPrices.has(addr0)) {
+          knownAddr = addr0;
+          isToken0Unknown = false;
+        }
+
+        if (!knownAddr) continue;
+
+        // 从储备比例推算价格
+        const decimals0 = pool.token0Decimals || 18;
+        const decimals1 = pool.token1Decimals || 18;
+        const reserve0 = Number(BigInt(pool.reserve0 || '0')) / Math.pow(10, decimals0);
+        const reserve1 = Number(BigInt(pool.reserve1 || '0')) / Math.pow(10, decimals1);
+
+        if (reserve0 <= 0 || reserve1 <= 0) continue;
+
+        const knownPrice = knownPrices.get(knownAddr)!;
+        let derivedPrice: number;
+
+        if (isToken0Unknown) {
+          // token0 未知, token1 已知 → token0Price = (reserve1 / reserve0) * token1Price
+          derivedPrice = (reserve1 / reserve0) * knownPrice;
+        } else {
+          // token1 未知, token0 已知 → token1Price = (reserve0 / reserve1) * token0Price
+          derivedPrice = (reserve0 / reserve1) * knownPrice;
+        }
+
+        if (derivedPrice > 0) {
+          // 更新数据库
+          token.priceUsd = derivedPrice.toFixed(18);
+          token.lastUpdateTime = new Date();
+          await this.tokenPriceRepository.save(token);
+
+          // 更新缓存
+          const dto = this.toTokenPriceDto(token);
+          this.priceCache.set(tokenAddr, dto);
+          knownPrices.set(tokenAddr, derivedPrice);
+
+          this.logger.debug(`💰 ${token.symbol}: $${derivedPrice.toFixed(6)} (AMM derived via ${pool.token0Symbol}/${pool.token1Symbol})`);
+          break; // 找到一个就够了
+        }
+      }
+    }
   }
 
   /**

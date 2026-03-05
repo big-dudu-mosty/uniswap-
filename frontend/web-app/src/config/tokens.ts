@@ -55,11 +55,61 @@ export const DEFAULT_TOKENS = [
   // TOKENS.WETH, // ETH 已经使用 WETH 地址，不需要单独显示
 ].filter(token => token.address) // 过滤掉未配置的代币
 
+// ========== 自定义代币管理（localStorage 持久化）==========
+
+const CUSTOM_TOKENS_KEY = 'dex_custom_tokens'
+
 /**
- * 根据地址获取代币信息
+ * 获取用户自定义代币列表
+ */
+export const getCustomTokens = (): Token[] => {
+  try {
+    const stored = localStorage.getItem(CUSTOM_TOKENS_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * 添加自定义代币
+ */
+export const addCustomToken = (token: Token): void => {
+  const customs = getCustomTokens()
+  // 不重复添加
+  if (customs.some(t => t.address.toLowerCase() === token.address.toLowerCase())) {
+    return
+  }
+  // 不添加已存在于默认列表中的代币
+  if (DEFAULT_TOKENS.some(t => t.address.toLowerCase() === token.address.toLowerCase())) {
+    return
+  }
+  customs.push(token)
+  localStorage.setItem(CUSTOM_TOKENS_KEY, JSON.stringify(customs))
+}
+
+/**
+ * 移除自定义代币
+ */
+export const removeCustomToken = (address: string): void => {
+  const customs = getCustomTokens().filter(
+    t => t.address.toLowerCase() !== address.toLowerCase()
+  )
+  localStorage.setItem(CUSTOM_TOKENS_KEY, JSON.stringify(customs))
+}
+
+/**
+ * 获取所有代币（默认 + 自定义）
+ */
+export const getAllTokens = (): Token[] => {
+  return [...DEFAULT_TOKENS, ...getCustomTokens()]
+}
+
+/**
+ * 根据地址获取代币信息（包含自定义代币）
  */
 export const getTokenByAddress = (address: string): Token | undefined => {
-  return DEFAULT_TOKENS.find(
+  return getAllTokens().find(
     (token) => token.address.toLowerCase() === address.toLowerCase()
   )
 }
@@ -68,7 +118,7 @@ export const getTokenByAddress = (address: string): Token | undefined => {
  * 根据符号获取代币信息
  */
 export const getTokenBySymbol = (symbol: string): Token | undefined => {
-  return DEFAULT_TOKENS.find(
+  return getAllTokens().find(
     (token) => token.symbol.toUpperCase() === symbol.toUpperCase()
   )
 }
