@@ -38,51 +38,50 @@
 
 ### 前置要求
 
-- Node.js >= 20.0.0
-- pnpm >= 8.0.0
-- PostgreSQL >= 15
-- Redis >= 7
-- Docker (可选)
+- Node.js >= 18
+- pnpm >= 8
+- PostgreSQL（通过 Docker 运行）
+- Redis（通过 Docker 运行）
 
 ### 安装依赖
 
-\`\`\`bash
+```bash
 cd backend/services/wallet-service
 pnpm install
-\`\`\`
+```
 
 ### 配置环境变量
 
-\`\`\`bash
+```bash
 # 复制环境变量模板
 cp .env.example .env
 
 # 编辑 .env 文件，填入你的配置
 # - DATABASE_* : 数据库配置
 # - REDIS_* : Redis 配置
-# - BLOCKCHAIN_RPC_URL : 以太坊 RPC 地址 (Alchemy/Infura)
-\`\`\`
+# - BLOCKCHAIN_RPC_URL : 以太坊 RPC 地址
+```
 
 ### 启动数据库（使用 Docker）
 
-\`\`\`bash
+```bash
 # 回到 backend 目录
 cd ../../
 
 # 启动 PostgreSQL 和 Redis
 docker-compose up -d postgres redis
-\`\`\`
+```
 
 ### 运行服务
 
-\`\`\`bash
+```bash
 # 开发模式（热重载）
 pnpm run start:dev
 
 # 生产模式
 pnpm run build
 pnpm run start:prod
-\`\`\`
+```
 
 ### 访问 API 文档
 
@@ -92,7 +91,7 @@ pnpm run start:prod
 
 ## 项目结构
 
-\`\`\`
+```
 src/
 ├── modules/              # 业务模块
 │   ├── address/         # 地址管理
@@ -112,25 +111,25 @@ src/
 ├── types/               # TypeScript 类型
 ├── app.module.ts        # 根模块
 └── main.ts              # 应用入口
-\`\`\`
+```
 
 ## API 示例
 
 ### 查询 ETH 余额
 
-\`\`\`bash
+```
 GET /api/v1/balance/eth/0x1234...
-\`\`\`
+```
 
 ### 查询代币余额
 
-\`\`\`bash
+```
 GET /api/v1/balance/token/0x1234.../0x5678...
-\`\`\`
+```
 
 ### 批量查询余额
 
-\`\`\`bash
+```bash
 POST /api/v1/balance/batch
 Content-Type: application/json
 
@@ -138,13 +137,13 @@ Content-Type: application/json
   "addresses": ["0x1234...", "0x5678..."],
   "tokens": ["0xUSDT...", "0xUSDC..."]
 }
-\`\`\`
+```
 
 ## 开发
 
 ### 运行测试
 
-\`\`\`bash
+```bash
 # 单元测试
 pnpm run test
 
@@ -153,17 +152,17 @@ pnpm run test:e2e
 
 # 测试覆盖率
 pnpm run test:cov
-\`\`\`
+```
 
 ### 代码检查
 
-\`\`\`bash
+```bash
 # ESLint
 pnpm run lint
 
 # Prettier
 pnpm run format
-\`\`\`
+```
 
 ## 性能优化
 
@@ -185,17 +184,13 @@ pnpm run format
 
 ### Docker 部署
 
-\`\`\`bash
+```bash
 # 构建镜像
 docker build -t dex-wallet-service .
 
 # 运行容器
 docker run -p 3001:3001 --env-file .env dex-wallet-service
-\`\`\`
-
-### Kubernetes 部署
-
-参考 `k8s/` 目录下的配置文件。
+```
 
 ## 故障排查
 
@@ -223,3 +218,6 @@ docker run -p 3001:3001 --env-file .env dex-wallet-service
 
 MIT
 
+---
+
+**最后更新：** 2026-03-06

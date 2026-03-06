@@ -162,10 +162,10 @@ pnpm run start:dev
 
 保持此终端运行。
 
-### 3. 启动 Trading Service
+### 3. 启动 Analytics Service
 
 ```bash
-cd backend/services/trading-service
+cd backend/services/analytics-service
 pnpm run start:dev
 ```
 
@@ -197,7 +197,7 @@ chmod +x tests/unit/*.sh
 # 检查端口占用
 lsof -i :8545  # Hardhat
 lsof -i :3001  # Wallet Service
-lsof -i :3002  # Trading Service
+lsof -i :3002  # Analytics Service
 ```
 
 ### 问题 3: 测试失败 - 合约未部署
@@ -235,11 +235,11 @@ redis-cli ping
 - ✅ Router 合约（用户交互）
 - ✅ ERC20 代币（USDT, DAI, USDC, WETH）
 
-### Trading Service
-- ✅ Pool Module（交易对管理）
-- ✅ Quote Module（价格查询）
-- ✅ Swap Module（代币交换）
-- ✅ Liquidity Module（流动性管理）
+### Analytics Service
+- Pool Module（交易对管理）
+- Quote Module（价格查询）
+- History Module（交易历史）
+- Blockchain Listener（链上事件同步）
 
 ### Wallet Service
 - ✅ Balance Module（余额查询）
@@ -250,32 +250,13 @@ redis-cli ping
 - ✅ WebSocket Push（实时推送）
 
 ### 集成测试
-- ✅ 合约 ↔ Trading Service
-- ✅ Trading Service ↔ Wallet Service
+- ✅ 合约 ↔ Analytics Service
+- ✅ Analytics Service ↔ Wallet Service
 - ✅ Block Scanner ↔ WebSocket
 - ✅ 端到端交易流程
 
 ---
 
-## 📚 相关文档
-
-- [端到端测试指南](../docs/11-testing/E2E_TEST_GUIDE.md)
-- [Trading Service 测试报告](../docs/11-testing/trading-service-tests.md)
-- [一期完成报告](../docs/11-testing/PHASE1_COMPLETION_REPORT.md)
-
----
-
-## 🎯 测试通过标准
-
-- 所有 API 调用返回 HTTP 2xx 状态码
-- 所有交易成功提交并获得 txHash
-- Block Scanner 正确同步交易
-- WebSocket 正常推送事件
-- 余额和流动性数据一致
-
----
-
-**测试时间**: 约 10-15 分钟（全部测试）  
-**测试用例数**: 40+  
-**成功率目标**: 95%+
+**测试时间**: 约 10-15 分钟（全部测试）
+**最后更新**: 2026-03-06
 

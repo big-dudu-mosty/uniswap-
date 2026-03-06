@@ -4,7 +4,7 @@
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### 前置条件
 
@@ -24,160 +24,115 @@ pnpm install
 pnpm dev
 ```
 
-应用将在 http://localhost:3000 启动
+应用将在 http://localhost:3000 启动。
 
 ---
 
-## 📁 项目结构
+## 功能页面
+
+| 页面 | 路径 | 说明 |
+|------|------|------|
+| Swap | `/swap` | 代币兑换，支持滑点保护 |
+| Pool | `/pool` | 查看所有流动性池列表 |
+| Pool Detail | `/pool/:id` | 池子详情（储备量、交易量、历史记录） |
+| Liquidity | `/liquidity` | 添加/移除流动性 |
+| History | `/history` | Swap 和流动性操作历史 |
+| Portfolio | `/portfolio` | 用户资产和 LP 持仓 |
+| Farms | `/farms` | 流动性挖矿列表（扩展功能） |
+| Farm Detail | `/farms/:id` | 矿池详情和质押操作 |
+
+---
+
+## 项目结构
 
 ```
 src/
 ├── components/          # 可复用组件
-│   ├── Layout/         # 页面布局
-│   └── ConnectWallet/  # 钱包连接
+│   ├── Layout/         # 页面布局（导航栏、侧边栏）
+│   └── ConnectWallet/  # 钱包连接按钮
 ├── pages/              # 页面组件
-│   ├── Swap/          # Swap 交易
-│   ├── Liquidity/     # 流动性管理
-│   ├── Pool/          # 交易对列表
-│   └── Portfolio/     # 资产管理
-├── hooks/              # 自定义 Hooks
-├── services/           # API 服务
+│   ├── Swap/          # 代币兑换
+│   ├── Pool/          # 流动性池列表
+│   ├── PoolDetail/    # 池子详情
+│   ├── Liquidity/     # 添加/移除流动性
+│   ├── History/       # 交易历史
+│   ├── Portfolio/     # 资产管理
+│   ├── Farms/         # 挖矿列表
+│   ├── FarmDetail/    # 矿池详情
+│   └── MyFarms/       # 我的挖矿
+├── hooks/              # 自定义 Hooks（useSwap, useLiquidity, useFarming 等）
+├── services/           # API 服务（与后端通信）
 ├── utils/              # 工具函数
-├── types/              # TypeScript 类型
-└── config/             # 配置文件
+├── types/              # TypeScript 类型定义
+└── config/             # 配置文件（合约地址、链配置）
 ```
 
 ---
 
-## 🛠️ 技术栈
+## 技术栈
 
-### 核心框架
-- **React 18** - UI 框架
-- **TypeScript** - 类型安全
-- **Vite** - 构建工具
-
-### UI 组件
-- **Ant Design** - UI 组件库
-- **Ant Design Icons** - 图标库
-
-### 状态管理
-- **Zustand** - 全局状态管理
-- **@tanstack/react-query** - 服务端状态管理
-
-### 区块链交互
-- **viem** - 以太坊交互库
-- **wagmi** - React Hooks for Ethereum
-
-### 网络请求
-- **Axios** - HTTP 客户端
-- **Socket.IO Client** - WebSocket 实时通信
-
-### 路由
-- **React Router v6** - 路由管理
+| 类别 | 技术 |
+|------|------|
+| UI 框架 | React 18 |
+| 类型安全 | TypeScript |
+| 构建工具 | Vite |
+| UI 组件库 | Ant Design |
+| 状态管理 | Zustand |
+| 数据请求 | @tanstack/react-query |
+| 区块链交互 | Wagmi + Viem |
+| HTTP 客户端 | Axios |
+| 实时通信 | Socket.IO Client |
+| 路由 | React Router v6 |
 
 ---
 
-## 🎯 功能模块
+## 环境变量
 
-### ✅ 已实现
-- [x] 基础项目框架
-- [x] 路由配置
-- [x] 布局组件
-- [x] 主题配置（暗色模式）
-
-### 🚧 开发中
-- [ ] 钱包连接（MetaMask）
-- [ ] Swap 交易界面
-- [ ] 流动性添加/移除
-- [ ] 资产查询
-- [ ] 交易历史
-- [ ] 实时价格更新
-
----
-
-## 🔧 开发指南
-
-### 环境变量
-
-创建 `.env` 文件：
+`.env` 文件由合约部署脚本自动生成和更新。如需手动创建：
 
 ```env
-VITE_WALLET_SERVICE_URL=http://localhost:3001/api/v1
 VITE_TRADING_SERVICE_URL=http://localhost:3002/api/v1
+VITE_WALLET_SERVICE_URL=http://localhost:3001/api/v1
 VITE_CHAIN_ID=31337
 VITE_RPC_URL=http://127.0.0.1:8545
+
+# 合约地址（部署脚本自动填充）
+VITE_FACTORY_ADDRESS=0x...
+VITE_ROUTER_ADDRESS=0x...
+VITE_WETH_ADDRESS=0x...
+VITE_USDT_ADDRESS=0x...
+VITE_DAI_ADDRESS=0x...
+VITE_USDC_ADDRESS=0x...
 ```
 
-### 代理配置
+---
 
-Vite 已配置代理转发到后端服务：
-- `/api/v1` → Wallet Service (port 3001)
-- `/trading` → Trading Service (port 3002)
-
-### 构建生产版本
+## 开发命令
 
 ```bash
+# 启动开发服务器
+pnpm dev
+
+# 构建生产版本
 pnpm build
-```
 
-### 预览生产版本
-
-```bash
+# 预览生产版本
 pnpm preview
 ```
 
 ---
 
-## 📚 相关文档
-
-- [后端 API 文档](../../docs/04-backend-api/README.md)
-- [智能合约文档](../../docs/03-smart-contracts/README.md)
-- [开发指南](../../docs/05-development/README.md)
-
----
-
-## 🐛 常见问题
+## 常见问题
 
 ### Q: 钱包连接失败？
-**A**: 确保已安装 MetaMask 并切换到 Hardhat 本地网络（Chain ID: 31337）
+确保已安装 MetaMask 并切换到正确网络（本地开发：Hardhat Local, Chain ID 31337）。
 
-### Q: 无法获取数据？
-**A**: 确保后端服务已启动
-```bash
-# Wallet Service
-cd backend/services/wallet-service && pnpm run start:dev
+### Q: 页面无数据？
+确保后端 Analytics Service 已启动（端口 3002），并已运行 `bash scripts/sync-all-pools.sh` 同步池子数据。
 
-# Trading Service
-cd backend/services/trading-service && pnpm run start:dev
-```
-
-### Q: Hardhat 节点未运行？
-**A**: 启动本地节点
-```bash
-cd contracts && npx hardhat node
-```
+### Q: 交易失败 "nonce too low"？
+Hardhat 节点重启后需要在 MetaMask 中重置账户：设置 → 高级 → 重置账户。
 
 ---
 
-## 📝 开发计划
-
-### Phase 1: 基础功能
-- [x] 项目初始化
-- [ ] 钱包连接
-- [ ] 基础交易功能
-
-### Phase 2: 核心功能
-- [ ] Swap 完整实现
-- [ ] 流动性管理
-- [ ] 交易历史
-
-### Phase 3: 增强功能
-- [ ] 实时价格图表
-- [ ] WebSocket 实时更新
-- [ ] 移动端适配
-
----
-
-**开发状态**: 🚧 进行中  
-**最后更新**: 2025-10-29
-
+**最后更新：** 2026-03-06
