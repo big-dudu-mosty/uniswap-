@@ -6,6 +6,7 @@ import {
   SwapOutlined,
 } from '@ant-design/icons'
 import { useWallet } from '../../hooks/useWallet'
+import { defaultChain } from '../../config/chains'
 import { message } from 'antd'
 import type { MenuProps } from 'antd'
 
@@ -19,7 +20,7 @@ const ConnectWallet: React.FC = () => {
     balance,
     connectWallet,
     disconnectWallet,
-    switchToHardhat,
+    switchToCorrectNetwork,
   } = useWallet()
 
   /**
@@ -78,10 +79,10 @@ const ConnectWallet: React.FC = () => {
     },
     {
       key: 'switch',
-      label: '切换到 Hardhat',
+      label: '切换网络',
       icon: <SwapOutlined />,
-      onClick: switchToHardhat,
-      disabled: chainId === 31337,
+      onClick: switchToCorrectNetwork,
+      disabled: chainId === defaultChain.id,
     },
     {
       type: 'divider',
@@ -118,7 +119,7 @@ const ConnectWallet: React.FC = () => {
         size="large"
         style={{
           background:
-            chainId === 31337 ? '#52c41a' : '#ff4d4f',
+            chainId === defaultChain.id ? '#52c41a' : '#ff4d4f',
         }}
       >
         {address && formatAddress(address)}

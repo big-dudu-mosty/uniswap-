@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useWalletClient, usePublicClient } from 'wagmi'
 import { parseAbi, Address } from 'viem'
 import { CONTRACT_ADDRESSES } from '../config/contracts'
+import { defaultChain } from '../config/chains'
 import { message } from 'antd'
 import { apiService } from '../services/api'
 
@@ -36,7 +37,7 @@ export const useSwap = () => {
     amount: bigint
   ): Promise<boolean> => {
     if (!walletClient) {
-      message.error('钱包未就绪，请确认 MetaMask 已切换到 Hardhat Local 网络 (Chain ID: 31337)')
+      message.error(`钱包未就绪，请确认 MetaMask 已切换到 ${defaultChain.name} 网络 (Chain ID: ${defaultChain.id})`)
       return false
     }
 
@@ -124,7 +125,7 @@ export const useSwap = () => {
     deadline: number
   }) => {
     if (!walletClient) {
-      message.error('钱包未就绪，请确认 MetaMask 已切换到 Hardhat Local 网络 (Chain ID: 31337)')
+      message.error(`钱包未就绪，请确认 MetaMask 已切换到 ${defaultChain.name} 网络 (Chain ID: ${defaultChain.id})`)
       return null
     }
 

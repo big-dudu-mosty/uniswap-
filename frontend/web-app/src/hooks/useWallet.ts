@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi'
 import { useWalletStore } from '../store/wallet'
-import { hardhatLocal } from '../config/chains'
+import { defaultChain } from '../config/chains'
 import { message } from 'antd'
 
 /**
@@ -24,7 +24,7 @@ export const useWallet = () => {
   // 获取 ETH 余额
   const { data: balance } = useBalance({
     address: address,
-    chainId: hardhatLocal.id,
+    chainId: defaultChain.id,
   })
   
   // 同步连接状态到全局 store
@@ -90,35 +90,34 @@ export const useWallet = () => {
   }
   
   /**
-   * 切换网络到 Hardhat
+   * 切换网络到目标链
    */
-  const switchToHardhat = async () => {
+  const switchToCorrectNetwork = async () => {
     try {
       if (!window.ethereum) {
         message.error('请安装 MetaMask')
         return
       }
-      
+
+      const targetChainId = `0x${defaultChain.id.toString(16)}`
+
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
-        params: [{ chainId: '0x7a69' }], // 31337 in hex
+        params: [{ chainId: targetChainId }],
       })
     } catch (error: any) {
       // 如果网络不存在，尝试添加
       if (error.code === 4902) {
         try {
+          const targetChainId = `0x${defaultChain.id.toString(16)}`
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [
               {
-                chainId: '0x7a69',
-                chainName: 'Hardhat Local',
-                nativeCurrency: {
-                  name: 'Ether',
-                  symbol: 'ETH',
-                  decimals: 18,
-                },
-                rpcUrls: ['http://127.0.0.1:8545'],
+                chainId: targetChainId,
+                chainName: defaultChain.name,
+                nativeCurrency: defaultChain.nativeCurrency,
+                rpcUrls: [defaultChain.rpcUrls.default.http[0]],
               },
             ],
           })
@@ -143,7 +142,7 @@ export const useWallet = () => {
     // 方法
     connectWallet,
     disconnectWallet,
-    switchToHardhat,
+    switchToCorrectNetwork,
   }
 }
 

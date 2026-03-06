@@ -13,7 +13,8 @@ import {
   formatUnits,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { hardhat } from 'viem/chains';
+import { hardhat, sepolia } from 'viem/chains';
+import type { Chain } from 'viem';
 
 /**
  * Blockchain Provider for Trading Service
@@ -34,6 +35,20 @@ export class BlockchainProvider implements OnModuleInit {
 
   constructor(private configService: ConfigService) {}
 
+  /**
+   * 根据配置的 chainId 返回对应的 chain 对象
+   */
+  private getChain(): Chain {
+    const chainId = this.configService.get<number>('blockchain.chainId', 31337);
+    switch (chainId) {
+      case 11155111:
+        return sepolia;
+      case 31337:
+      default:
+        return hardhat;
+    }
+  }
+
   async onModuleInit() {
     await this.initializeClients();
     this.loadContractAddresses();
@@ -51,7 +66,7 @@ export class BlockchainProvider implements OnModuleInit {
 
     // HTTP 客户端（用于查询和交易）
     this.publicClient = createPublicClient({
-      chain: hardhat,
+      chain: this.getChain(),
       transport: http(rpcUrl),
     });
 
@@ -59,7 +74,7 @@ export class BlockchainProvider implements OnModuleInit {
     if (wsUrl) {
       try {
         this.wsClient = createPublicClient({
-          chain: hardhat,
+          chain: this.getChain(),
           transport: webSocket(wsUrl),
         });
         this.logger.log('WebSocket client initialized');
@@ -78,7 +93,7 @@ export class BlockchainProvider implements OnModuleInit {
         this.walletAccount = account;
         this.walletClient = createWalletClient({
           account,
-          chain: hardhat,
+          chain: this.getChain(),
           transport: http(rpcUrl),
         });
         this.logger.log(`Wallet client initialized: ${account.address}`);
@@ -442,7 +457,7 @@ export class BlockchainProvider implements OnModuleInit {
 
     try {
       const hash = await this.walletClient.writeContract({
-        chain: hardhat,
+        chain: this.getChain(),
         account: this.walletAccount,
         address: masterChefAddress,
         abi: masterChefAbi,

@@ -4,7 +4,8 @@ import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { createPublicClient, http, parseAbi, formatUnits } from 'viem';
-import { hardhat } from 'viem/chains';
+import { hardhat, sepolia } from 'viem/chains';
+import type { Chain } from 'viem';
 import { TokenPrice } from './entities/token-price.entity';
 import { TokenPriceDto, AllPricesResponseDto } from './dto/price.dto';
 
@@ -52,9 +53,11 @@ export class PriceService {
     private readonly configService: ConfigService,
   ) {
     const rpcUrl = this.configService.get<string>('BLOCKCHAIN_RPC_URL', 'http://127.0.0.1:8545');
-    
+    const chainId = parseInt(this.configService.get<string>('BLOCKCHAIN_CHAIN_ID', '31337'), 10);
+    const chain: Chain = chainId === 11155111 ? sepolia : hardhat;
+
     this.publicClient = createPublicClient({
-      chain: hardhat,
+      chain,
       transport: http(rpcUrl),
     });
 

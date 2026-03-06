@@ -9,7 +9,8 @@ import {
   PublicClient,
   parseEther,
 } from 'viem';
-import { localhost } from 'viem/chains';
+import { localhost, sepolia } from 'viem/chains';
+import type { Chain } from 'viem';
 
 @Injectable()
 export class BlockchainProvider implements OnModuleInit {
@@ -18,6 +19,20 @@ export class BlockchainProvider implements OnModuleInit {
   private wsClient: PublicClient;
 
   constructor(private configService: ConfigService) {}
+
+  /**
+   * 根据配置的 chainId 返回对应的 chain 对象
+   */
+  private getChain(): Chain {
+    const chainId = this.configService.get<number>('blockchain.chainId', 31337);
+    switch (chainId) {
+      case 11155111:
+        return sepolia;
+      case 31337:
+      default:
+        return localhost;
+    }
+  }
 
   onModuleInit() {
     this.initializeClients();
@@ -35,7 +50,7 @@ export class BlockchainProvider implements OnModuleInit {
 
     // HTTP 客户端（用于查询）
     this.publicClient = createPublicClient({
-      chain: localhost,
+      chain: this.getChain(),
       transport: http(rpcUrl),
     });
 
@@ -43,7 +58,7 @@ export class BlockchainProvider implements OnModuleInit {
     if (wsUrl) {
       try {
         this.wsClient = createPublicClient({
-          chain: localhost,
+          chain: this.getChain(),
           transport: webSocket(wsUrl),
         });
         this.logger.log('WebSocket client initialized');

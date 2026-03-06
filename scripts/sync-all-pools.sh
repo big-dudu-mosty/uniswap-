@@ -6,8 +6,16 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ENV_DEPLOYED="$PROJECT_ROOT/contracts/.env.deployed"
+ANALYTICS_ENV="$PROJECT_ROOT/backend/services/analytics-service/.env"
+
+# 从 analytics-service .env 读取 RPC URL（支持 Sepolia / localhost）
+if [ -f "$ANALYTICS_ENV" ]; then
+  RPC_URL=$(grep '^BLOCKCHAIN_RPC_URL=' "$ANALYTICS_ENV" | cut -d'=' -f2-)
+fi
+RPC_URL="${RPC_URL:-http://127.0.0.1:8545}"
 
 echo "🔍 检查服务状态..."
+echo "   RPC URL: $RPC_URL"
 
 # 检查后端服务是否运行
 if ! curl -s http://localhost:3002/health > /dev/null 2>&1; then
@@ -18,14 +26,14 @@ fi
 
 echo "✅ Analytics Service 运行中"
 
-# 检查 Hardhat 节点是否运行
-if ! curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' > /dev/null 2>&1; then
-  echo "❌ Hardhat 节点未运行！"
-  echo "   请先启动: cd contracts && npx hardhat node"
+# 检查区块链节点是否运行
+if ! curl -s -X POST "$RPC_URL" -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' > /dev/null 2>&1; then
+  echo "❌ 区块链节点不可达！($RPC_URL)"
+  echo "   请检查 RPC URL 配置或启动本地节点"
   exit 1
 fi
 
-echo "✅ Hardhat 节点运行中"
+echo "✅ 区块链节点运行中"
 
 # 从 .env.deployed 读取地址
 if [ ! -f "$ENV_DEPLOYED" ]; then
@@ -50,7 +58,7 @@ echo ""
 echo "🔗 从 Factory 合约读取所有交易对..."
 
 # allPairsLength() selector: 0x574f2ba3
-pairs_length_hex=$(curl -s -X POST http://127.0.0.1:8545 \
+pairs_length_hex=$(curl -s -X POST "$RPC_URL" \
   -H "Content-Type: application/json" \
   --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"$FACTORY_ADDRESS\",\"data\":\"0x574f2ba3\"},\"latest\"],\"id\":1}" \
   | grep -o '"result":"[^"]*"' | cut -d'"' -f4)
@@ -80,7 +88,7 @@ for ((i=0; i<pairs_length; i++)); do
   # 将索引编码为 32 字节 hex
   index_hex=$(printf "%064x" $i)
 
-  pair_result=$(curl -s -X POST http://127.0.0.1:8545 \
+  pair_result=$(curl -s -X POST "$RPC_URL" \
     -H "Content-Type: application/json" \
     --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"$FACTORY_ADDRESS\",\"data\":\"0x1e3dd18b${index_hex}\"},\"latest\"],\"id\":1}" \
     | grep -o '"result":"[^"]*"' | cut -d'"' -f4)
@@ -91,14 +99,14 @@ for ((i=0; i<pairs_length; i++)); do
   echo "📝 处理交易对 [$i]: $pair_address"
 
   # 读取 token0 地址: token0() selector = 0x0dfe1681
-  token0_result=$(curl -s -X POST http://127.0.0.1:8545 \
+  token0_result=$(curl -s -X POST "$RPC_URL" \
     -H "Content-Type: application/json" \
     --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"$pair_address\",\"data\":\"0x0dfe1681\"},\"latest\"],\"id\":1}" \
     | grep -o '"result":"[^"]*"' | cut -d'"' -f4)
   token0="0x${token0_result:26:40}"
 
   # 读取 token1 地址: token1() selector = 0xd21220a7
-  token1_result=$(curl -s -X POST http://127.0.0.1:8545 \
+  token1_result=$(curl -s -X POST "$RPC_URL" \
     -H "Content-Type: application/json" \
     --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_call\",\"params\":[{\"to\":\"$pair_address\",\"data\":\"0xd21220a7\"},\"latest\"],\"id\":1}" \
     | grep -o '"result":"[^"]*"' | cut -d'"' -f4)

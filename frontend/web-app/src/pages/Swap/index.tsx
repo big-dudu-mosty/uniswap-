@@ -33,12 +33,13 @@ import { Token } from '../../types'
 import { DEFAULT_TOKENS } from '../../config/tokens'
 import { apiService } from '../../services/api'
 import { formatNumber, isValidNumber } from '../../utils/format'
+import { defaultChain } from '../../config/chains'
 import './index.css'
 
 const { Title, Text } = Typography
 
 const SwapPage: React.FC = () => {
-  const { address, isConnected, balance, chainId, switchToHardhat } = useWallet()
+  const { address, isConnected, balance, chainId, switchToCorrectNetwork } = useWallet()
   const { swapExactTokensForTokens, loading: swapLoading } = useSwap()
   const publicClient = usePublicClient()
 
@@ -274,9 +275,9 @@ const SwapPage: React.FC = () => {
       return
     }
 
-    if (chainId !== 31337) {
-      message.warning('请在 MetaMask 中切换到 Hardhat Local 网络 (Chain ID: 31337)')
-      switchToHardhat()
+    if (chainId !== defaultChain.id) {
+      message.warning(`请在 MetaMask 中切换到 ${defaultChain.name} 网络 (Chain ID: ${defaultChain.id})`)
+      switchToCorrectNetwork()
       return
     }
 

@@ -3,7 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { createPublicClient, http, parseAbi, formatUnits } from 'viem';
-import { hardhat } from 'viem/chains';
+import { hardhat, sepolia } from 'viem/chains';
+import type { Chain } from 'viem';
 import { Farm } from './entities/farm.entity';
 import { UserFarm } from './entities/user-farm.entity';
 import { PriceService } from '../price/price.service';
@@ -73,9 +74,11 @@ export class FarmingService {
     private readonly priceService: PriceService,
   ) {
     const rpcUrl = this.configService.get<string>('BLOCKCHAIN_RPC_URL', 'http://127.0.0.1:8545');
-    
+    const chainId = parseInt(this.configService.get<string>('BLOCKCHAIN_CHAIN_ID', '31337'), 10);
+    const chain: Chain = chainId === 11155111 ? sepolia : hardhat;
+
     this.publicClient = createPublicClient({
-      chain: hardhat,
+      chain,
       transport: http(rpcUrl),
     });
 
