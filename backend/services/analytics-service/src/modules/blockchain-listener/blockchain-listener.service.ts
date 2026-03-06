@@ -176,21 +176,25 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
           }
         }
 
-        // 2. 获取所有 Pool 的地址
+        // 2. 获取所有 Pool 的地址（去重，避免大小写不一致导致重复处理）
         const pools = await this.poolRepository.find();
-        
+        const processedPairs = new Set<string>();
+
         for (const pool of pools) {
           if (!pool.pairAddress) continue;
+          const normalizedAddress = pool.pairAddress.toLowerCase();
+          if (processedPairs.has(normalizedAddress)) continue;
+          processedPairs.add(normalizedAddress);
 
           // 获取该 Pair 的所有事件
           const pairLogs = await publicClient.getLogs({
-            address: pool.pairAddress as Address,
+            address: normalizedAddress as Address,
             fromBlock: this.lastProcessedBlock + 1n,
             toBlock: currentBlock,
           });
 
           for (const log of pairLogs) {
-            await this.handlePairEvent(log, pool.pairAddress as Address);
+            await this.handlePairEvent(log, normalizedAddress as Address);
           }
         }
 
@@ -318,30 +322,35 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
         return;
       }
 
+      // 统一地址为小写，避免大小写不一致导致重复记录
+      const pairAddress = event.pair.toLowerCase() as Address;
+      const token0Address = event.token0.toLowerCase() as Address;
+      const token1Address = event.token1.toLowerCase() as Address;
+
       this.logger.log(
-        `🆕 New Pair Created: ${event.token0}/${event.token1} -> ${event.pair}`,
+        `🆕 New Pair Created: ${token0Address}/${token1Address} -> ${pairAddress}`,
       );
 
       // 检查数据库中是否已存在
       const existingPool = await this.poolRepository.findOne({
-        where: { pairAddress: event.pair },
+        where: { pairAddress },
       });
 
       if (!existingPool) {
         // 获取代币信息
         const [token0Info, token1Info] = await Promise.all([
-          this.blockchainProvider.getTokenInfo(event.token0),
-          this.blockchainProvider.getTokenInfo(event.token1),
+          this.blockchainProvider.getTokenInfo(token0Address),
+          this.blockchainProvider.getTokenInfo(token1Address),
         ]);
 
         // 获取储备量
-        const reserves = await this.blockchainProvider.getReserves(event.pair);
+        const reserves = await this.blockchainProvider.getReserves(pairAddress);
 
         // 创建新的 Pool 记录
         const newPool = this.poolRepository.create({
-          pairAddress: event.pair,
-          token0Address: event.token0,
-          token1Address: event.token1,
+          pairAddress,
+          token0Address,
+          token1Address,
           token0Symbol: token0Info.symbol,
           token1Symbol: token1Info.symbol,
           token0Decimals: token0Info.decimals,
@@ -374,7 +383,7 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       }
 
       // 无论 Pool 是否已存在于 DB，都要确保已添加到 MasterChef
-      await this.ensureFarmPool(event.pair);
+      await this.ensureFarmPool(pairAddress);
     } catch (error) {
       this.logger.error('Error handling PairCreated event', error);
       this.status.errors++;
@@ -486,12 +495,13 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       });
 
       const { reserve0, reserve1 } = decoded.args as any;
+      const normalizedPair = pairAddress.toLowerCase();
 
-      this.logger.debug(`🔄 Sync: ${pairAddress} -> ${reserve0}/${reserve1}`);
+      this.logger.debug(`🔄 Sync: ${normalizedPair} -> ${reserve0}/${reserve1}`);
 
       // 更新数据库
       await this.poolRepository.update(
-        { pairAddress },
+        { pairAddress: normalizedPair },
         {
           reserve0: reserve0.toString(),
           reserve1: reserve1.toString(),
@@ -502,7 +512,7 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       this.status.lastEventTime = new Date();
 
       // 广播 Pool 更新事件
-      const updatedPool = await this.poolRepository.findOne({ where: { pairAddress } });
+      const updatedPool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
       if (updatedPool && this.eventsGateway?.server) {
         this.eventsGateway.broadcastPoolUpdate({
           id: updatedPool.id,
@@ -531,6 +541,7 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       });
 
       const { sender, amount0, amount1 } = decoded.args as any;
+      const normalizedPair = pairAddress.toLowerCase();
 
       // 获取交易信息以找到真实的用户地址
       let realUserAddress = sender.toLowerCase();
@@ -549,11 +560,11 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       }
 
       this.logger.log(
-        `➕ Mint: ${pairAddress} by ${realUserAddress} -> ${amount0}/${amount1}`,
+        `➕ Mint: ${normalizedPair} by ${realUserAddress} -> ${amount0}/${amount1}`,
       );
 
       // 查找对应的 Pool
-      const pool = await this.poolRepository.findOne({ where: { pairAddress } });
+      const pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
       if (pool) {
         // 记录到 liquidity history 表
         await this.historyService.createLiquidityHistory({
@@ -580,7 +591,7 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       if (this.eventsGateway?.server) {
         this.eventsGateway.broadcastLiquidityChange({
           type: 'mint',
-          pairAddress,
+          pairAddress: normalizedPair,
           sender: realUserAddress,
           amount0: amount0.toString(),
           amount1: amount1.toString(),
@@ -604,6 +615,7 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       });
 
       const { sender, amount0, amount1, to } = decoded.args as any;
+      const normalizedPair = pairAddress.toLowerCase();
 
       // 获取交易信息以找到真实的用户地址
       let realUserAddress = to.toLowerCase(); // Burn 事件中 to 是接收代币的地址
@@ -622,11 +634,11 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       }
 
       this.logger.log(
-        `➖ Burn: ${pairAddress} by ${realUserAddress} -> ${amount0}/${amount1}`,
+        `➖ Burn: ${normalizedPair} by ${realUserAddress} -> ${amount0}/${amount1}`,
       );
 
       // 查找对应的 Pool
-      const pool = await this.poolRepository.findOne({ where: { pairAddress } });
+      const pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
       if (pool) {
         // 记录到 liquidity history 表
         await this.historyService.createLiquidityHistory({
@@ -653,7 +665,7 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       if (this.eventsGateway?.server) {
         this.eventsGateway.broadcastLiquidityChange({
           type: 'burn',
-          pairAddress,
+          pairAddress: normalizedPair,
           sender: realUserAddress,
           amount0: amount0.toString(),
           amount1: amount1.toString(),
@@ -679,13 +691,14 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
 
       const { sender, amount0In, amount1In, amount0Out, amount1Out, to } =
         decoded.args as any;
+      const normalizedPair = pairAddress.toLowerCase();
 
       this.logger.log(
-        `💱 Swap: ${pairAddress} by ${sender} -> In(${amount0In}/${amount1In}) Out(${amount0Out}/${amount1Out})`,
+        `💱 Swap: ${normalizedPair} by ${sender} -> In(${amount0In}/${amount1In}) Out(${amount0Out}/${amount1Out})`,
       );
 
       // 查找对应的 Pool
-      const pool = await this.poolRepository.findOne({ where: { pairAddress } });
+      const pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
       if (pool) {
         // 判断输入/输出代币
         const isToken0In = amount0In > 0n;
