@@ -5,7 +5,7 @@ import { Pool } from '../pool/entities/pool.entity';
 import { SwapHistory } from '../history/entities/swap-history.entity';
 import { LiquidityHistory } from '../history/entities/liquidity-history.entity';
 import { PriceHistory } from './entities/price-history.entity';
-import { OverviewDto, PoolAnalyticsDto, PoolHistoryDto, UserStatsDto } from './dto/analytics.dto';
+import { OverviewDto, PoolAnalyticsDto, PoolHistoryDto, UserStatsDto, LeaderboardResponseDto, UserChartDataDto } from './dto/analytics.dto';
 import { SlippageStatsDto } from '../quote/dto/quote.dto';
 
 @Injectable()
@@ -232,6 +232,112 @@ export class AnalyticsService {
       activePools,
       lastActivityAt,
     };
+  }
+
+  /**
+   * 获取排行榜数据
+   */
+  async getLeaderboard(type: string = 'swap', period: string = 'all'): Promise<LeaderboardResponseDto> {
+    // 根据 period 计算起始时间
+    let sinceDate: Date | null = null;
+    const now = Date.now();
+    switch (period) {
+      case '24h':
+        sinceDate = new Date(now - 24 * 60 * 60 * 1000);
+        break;
+      case '7d':
+        sinceDate = new Date(now - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '30d':
+        sinceDate = new Date(now - 30 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        sinceDate = null; // 'all'
+    }
+
+    let rawResults: Array<{ userAddress: string; count: string }>;
+
+    if (type === 'liquidity') {
+      const qb = this.liquidityHistoryRepository.createQueryBuilder('lh')
+        .select('lh.userAddress', 'userAddress')
+        .addSelect('COUNT(*)', 'count');
+      if (sinceDate) {
+        qb.where('lh.createdAt >= :since', { since: sinceDate });
+      }
+      rawResults = await qb
+        .groupBy('lh.userAddress')
+        .orderBy('count', 'DESC')
+        .limit(20)
+        .getRawMany();
+    } else {
+      const qb = this.swapHistoryRepository.createQueryBuilder('sh')
+        .select('sh.userAddress', 'userAddress')
+        .addSelect('COUNT(*)', 'count');
+      if (sinceDate) {
+        qb.where('sh.createdAt >= :since', { since: sinceDate });
+      }
+      rawResults = await qb
+        .groupBy('sh.userAddress')
+        .orderBy('count', 'DESC')
+        .limit(20)
+        .getRawMany();
+    }
+
+    return {
+      period,
+      type,
+      data: rawResults.map((row, index) => ({
+        rank: index + 1,
+        userAddress: row.userAddress,
+        count: Number(row.count),
+      })),
+    };
+  }
+
+  /**
+   * 获取用户图表数据（交易频率趋势 + 交易对分布）
+   */
+  async getUserChartData(userAddress: string): Promise<UserChartDataDto> {
+    const normalizedAddress = userAddress.toLowerCase();
+
+    // 1. 每日交易频率
+    const dailyRaw = await this.swapHistoryRepository
+      .createQueryBuilder('sh')
+      .select("DATE(sh.createdAt)", 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where('sh.userAddress = :addr', { addr: normalizedAddress })
+      .groupBy('date')
+      .orderBy('date', 'ASC')
+      .getRawMany();
+
+    const dailyStats = dailyRaw.map((row) => ({
+      date: row.date,
+      swapCount: Number(row.count),
+    }));
+
+    // 2. 交易对分布
+    const poolDistRaw = await this.swapHistoryRepository
+      .createQueryBuilder('sh')
+      .select('sh.poolId', 'poolId')
+      .addSelect('COUNT(*)', 'count')
+      .where('sh.userAddress = :addr', { addr: normalizedAddress })
+      .groupBy('sh.poolId')
+      .orderBy('count', 'DESC')
+      .getRawMany();
+
+    // 查询对应的 pool 信息获取 token symbol
+    const poolDistribution: Array<{ poolId: number; token0Symbol: string; token1Symbol: string; count: number }> = [];
+    for (const row of poolDistRaw) {
+      const pool = await this.poolRepository.findOne({ where: { id: row.poolId } });
+      poolDistribution.push({
+        poolId: row.poolId,
+        token0Symbol: pool?.token0Symbol || '?',
+        token1Symbol: pool?.token1Symbol || '?',
+        count: Number(row.count),
+      });
+    }
+
+    return { dailyStats, poolDistribution };
   }
 
   /**

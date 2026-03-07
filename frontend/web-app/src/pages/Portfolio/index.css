@@ -413,6 +413,63 @@
   color: #ff4d4f;
 }
 
+/* 图表区域 */
+.charts-section {
+  margin-top: 32px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.chart-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 8px 32px rgba(135, 78, 242, 0.1);
+  transition: all 0.3s ease;
+}
+
+.chart-card:hover {
+  border-color: rgba(135, 78, 242, 0.3);
+  box-shadow: 0 12px 48px rgba(135, 78, 242, 0.2);
+}
+
+.chart-card-header {
+  margin-bottom: 20px;
+}
+
+.chart-card-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chart-container {
+  width: 100%;
+}
+
+/* recharts 文字颜色 */
+.chart-card .recharts-text {
+  fill: rgba(255, 255, 255, 0.65);
+}
+
+.chart-card .recharts-legend-item-text {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.chart-card .recharts-label {
+  fill: rgba(255, 255, 255, 0.85);
+}
+
 /* 动画 */
 @keyframes slideIn {
   from {
@@ -485,6 +542,15 @@
   .transaction-item-right {
     width: 100%;
     text-align: left;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-card {
+    padding: 20px;
+    border-radius: 20px;
   }
 }
 

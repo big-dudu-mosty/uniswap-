@@ -36,6 +36,27 @@ export class AnalyticsController {
   }
 
   /**
+   * 获取排行榜数据
+   * GET /api/v1/analytics/leaderboard?type=swap&period=24h
+   */
+  @Get('leaderboard')
+  async getLeaderboard(
+    @Query('type') type?: string,
+    @Query('period') period?: string,
+  ) {
+    return this.analyticsService.getLeaderboard(type || 'swap', period || 'all');
+  }
+
+  /**
+   * 获取用户图表数据
+   * GET /api/v1/analytics/user/:address/charts
+   */
+  @Get('user/:address/charts')
+  async getUserChartData(@Param('address') address: string) {
+    return this.analyticsService.getUserChartData(address);
+  }
+
+  /**
    * 获取用户统计数据
    * GET /api/v1/analytics/user/:address
    */

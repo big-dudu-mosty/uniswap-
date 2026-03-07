@@ -358,6 +358,20 @@ export const apiService = {
     return tradingApi.get(`/analytics/user/${userAddress}`)
   },
 
+  /**
+   * 获取排行榜数据
+   */
+  getLeaderboard: async (type: string, period: string): Promise<any> => {
+    return tradingApi.get('/analytics/leaderboard', { params: { type, period } })
+  },
+
+  /**
+   * 获取用户图表数据（交易频率趋势 + 交易对分布）
+   */
+  getUserChartData: async (userAddress: string): Promise<any> => {
+    return tradingApi.get(`/analytics/user/${userAddress}/charts`)
+  },
+
   // ==================== Farming ====================
 
   /**

@@ -98,9 +98,27 @@ export class FarmingService {
     this.logger.log('Fetching all farms...');
 
     // 从数据库获取所有池子
-    const farms = await this.farmRepository.find({
+    const allFarms = await this.farmRepository.find({
       order: { poolId: 'ASC' },
     });
+
+    // 过滤掉没有流动性的空池子（reserve 都为 0 的）
+    const farms: typeof allFarms = [];
+    for (const farm of allFarms) {
+      try {
+        const reserves = await this.publicClient.readContract({
+          address: farm.lpTokenAddress as `0x${string}`,
+          abi: this.pairAbi,
+          functionName: 'getReserves',
+        });
+        const [r0, r1] = reserves as [bigint, bigint, number];
+        if (r0 > 0n || r1 > 0n) {
+          farms.push(farm);
+        }
+      } catch {
+        // 读取失败的跳过
+      }
+    }
 
     // 从链上读取总分配点和每区块奖励
     const [totalAllocPoint, rewardPerBlock, currentBlock] = await Promise.all([
@@ -388,6 +406,28 @@ export class FarmingService {
 
       farm.tvl = tvlUsd;
       farm.totalStakedUsd = tvlUsd;
+
+      // 如果 staked TVL 为 0 但池子有流动性，用池子储备量 TVL
+      if (parseFloat(tvlUsd || '0') === 0) {
+        const token0Price = await this.priceService.getTokenPrice(token0Address.toLowerCase()).catch(() => null);
+        const token1Price = await this.priceService.getTokenPrice(token1Address.toLowerCase()).catch(() => null);
+
+        let poolTvl = 0;
+        const nr0 = parseFloat(reserve0);
+        const nr1 = parseFloat(reserve1);
+
+        if (token0Price && token1Price) {
+          poolTvl = nr0 * parseFloat(token0Price.priceUsd) + nr1 * parseFloat(token1Price.priceUsd);
+        } else if (token0Price) {
+          poolTvl = nr0 * parseFloat(token0Price.priceUsd) * 2;
+        } else if (token1Price) {
+          poolTvl = nr1 * parseFloat(token1Price.priceUsd) * 2;
+        }
+
+        if (poolTvl > 0) {
+          farm.tvl = poolTvl.toFixed(2);
+        }
+      }
     } catch (error) {
       this.logger.warn(`Failed to calculate USD value for pool ${poolId}, using token amount`);
       farm.tvl = farm.totalStaked;

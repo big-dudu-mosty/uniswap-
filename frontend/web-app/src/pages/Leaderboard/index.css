@@ -1,0 +1,184 @@
+/* Leaderboard 页面主容器 */
+.leaderboard-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  min-height: calc(100vh - 128px);
+}
+
+/* 页面头部 */
+.leaderboard-header {
+  margin-bottom: 32px;
+  padding: 32px;
+  background: linear-gradient(135deg, rgba(0, 185, 107, 0.1) 0%, rgba(0, 185, 107, 0.05) 100%);
+  border: 2px solid rgba(0, 185, 107, 0.2);
+  border-radius: 24px;
+  animation: slideIn 0.4s ease-out;
+}
+
+.leaderboard-header h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #00b96b 0%, #52c41a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* 主卡片 */
+.leaderboard-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0, 185, 107, 0.1);
+}
+
+/* 时间筛选 */
+.period-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.period-btn {
+  border-radius: 12px !important;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.period-btn.active {
+  background: linear-gradient(135deg, #00b96b 0%, #52c41a 100%) !important;
+  border-color: #00b96b !important;
+  color: #fff !important;
+}
+
+/* Tabs 样式 */
+.leaderboard-card .ant-tabs-tab {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 15px;
+}
+
+.leaderboard-card .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #00b96b !important;
+}
+
+.leaderboard-card .ant-tabs-ink-bar {
+  background: #00b96b;
+}
+
+/* 表格样式 */
+.leaderboard-card .ant-table {
+  background: transparent;
+}
+
+.leaderboard-card .ant-table-thead > tr > th {
+  background-color: rgba(0, 185, 107, 0.12) !important;
+  color: #00b96b !important;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(0, 185, 107, 0.3) !important;
+}
+
+.leaderboard-card .ant-table-tbody > tr > td {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.leaderboard-card .ant-table-tbody > tr:hover > td {
+  background: rgba(0, 185, 107, 0.08) !important;
+}
+
+/* 排名标记 */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.rank-gold {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+}
+
+.rank-silver {
+  background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+  color: #000;
+  box-shadow: 0 2px 8px rgba(192, 192, 192, 0.4);
+}
+
+.rank-bronze {
+  background: linear-gradient(135deg, #cd7f32, #b5651d);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(205, 127, 50, 0.4);
+}
+
+.rank-number {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 15px;
+}
+
+/* 地址链接 */
+.address-link {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 14px;
+  color: #00b96b !important;
+}
+
+.address-link:hover {
+  color: #52c41a !important;
+}
+
+/* 次数值 */
+.count-value {
+  font-weight: 700;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* 动画 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .leaderboard-page {
+    padding: 20px 16px;
+  }
+
+  .leaderboard-header {
+    padding: 24px;
+  }
+
+  .leaderboard-header h2 {
+    font-size: 22px;
+  }
+
+  .leaderboard-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .period-filter {
+    flex-wrap: wrap;
+  }
+}

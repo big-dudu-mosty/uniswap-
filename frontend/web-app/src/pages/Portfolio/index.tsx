@@ -10,11 +10,28 @@ import {
   ReloadOutlined,
   SwapOutlined,
   WalletOutlined,
+  LineChartOutlined,
+  PieChartOutlined,
 } from '@ant-design/icons'
 import { useAccount, useBalance, useReadContracts } from 'wagmi'
+import { useParams } from 'react-router-dom'
 import { formatUnits } from 'viem'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts'
 import { apiService } from '../../services/api'
 import { formatNumber, formatTimestamp } from '../../utils/format'
+import { formatBeijingDate } from '../../utils/time'
 import { DEFAULT_TOKENS, getCustomTokens } from '../../config/tokens'
 import './index.css'
 
@@ -96,16 +113,30 @@ const balanceOfAbi = [
   },
 ] as const
 
+const PIE_COLORS = ['#00b96b', '#1890ff', '#874ef2', '#d946ef', '#faad14']
+
 // ========== Main Component ==========
 const PortfolioContent: React.FC = () => {
-  const { address, isConnected } = useAccount()
+  const { address: connectedAddress, isConnected } = useAccount()
+  const { address: routeAddress } = useParams<{ address: string }>()
+
+  // 如果 URL 中有地址参数，使用它；否则使用连接的钱包地址
+  const address = routeAddress || connectedAddress
+  const isOwnPortfolio = !routeAddress || routeAddress.toLowerCase() === connectedAddress?.toLowerCase()
 
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [txLoading, setTxLoading] = useState(false)
 
+  // 图表数据
+  const [chartData, setChartData] = useState<{
+    dailyStats: Array<{ date: string; swapCount: number }>
+    poolDistribution: Array<{ poolId: number; token0Symbol: string; token1Symbol: string; count: number }>
+  } | null>(null)
+  const [chartLoading, setChartLoading] = useState(false)
+
   // 获取 ETH 余额
   const { data: ethBalance, refetch: refetchEth } = useBalance({
-    address: address,
+    address: address as `0x${string}` | undefined,
   })
 
   // 合并默认代币 + 自定义导入代币（只在挂载时读一次）
@@ -212,19 +243,49 @@ const PortfolioContent: React.FC = () => {
     }
   }
 
-  useEffect(() => {
-    if (isConnected && address) {
-      fetchTransactions()
-    }
-  }, [isConnected, address])
+  /**
+   * 获取图表数据
+   */
+  const fetchChartData = async () => {
+    if (!address) return
 
-  const handleRefresh = () => {
-    refetchEth()
-    refetchTokens()
-    fetchTransactions()
+    setChartLoading(true)
+    try {
+      const response = await apiService.getUserChartData(address)
+      setChartData(response)
+    } catch (error) {
+      console.error('Failed to fetch chart data:', error)
+      setChartData(null)
+    } finally {
+      setChartLoading(false)
+    }
   }
 
-  if (!isConnected) {
+  useEffect(() => {
+    if (address) {
+      fetchTransactions()
+      fetchChartData()
+
+      // 每 15 秒自动刷新数据
+      const pollInterval = setInterval(() => {
+        fetchTransactions()
+        fetchChartData()
+      }, 15000)
+
+      return () => clearInterval(pollInterval)
+    }
+  }, [address])
+
+  const handleRefresh = () => {
+    if (isOwnPortfolio) {
+      refetchEth()
+      refetchTokens()
+    }
+    fetchTransactions()
+    fetchChartData()
+  }
+
+  if (!isConnected && !routeAddress) {
     return (
       <div className="portfolio-page">
         <div className="assets-card" style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -240,16 +301,23 @@ const PortfolioContent: React.FC = () => {
       {/* 页面头部 */}
       <div className="portfolio-header">
         <div>
-          <Title level={2} style={{ margin: 0 }}>我的资产</Title>
-          <Text style={{ color: 'rgba(255,255,255,0.65)' }}>查看您的余额和交易历史</Text>
+          <Title level={2} style={{ margin: 0 }}>
+            {isOwnPortfolio ? 'My Portfolio' : 'User Portfolio'}
+          </Title>
+          <Text style={{ color: 'rgba(255,255,255,0.65)' }}>
+            {isOwnPortfolio
+              ? 'View your balance and trading history'
+              : `${address?.slice(0, 6)}...${address?.slice(-4)}`
+            }
+          </Text>
         </div>
         <Button
           type="primary"
           icon={<ReloadOutlined />}
           onClick={handleRefresh}
-          loading={tokensLoading || txLoading}
+          loading={tokensLoading || txLoading || chartLoading}
         >
-          刷新
+          Refresh
         </Button>
       </div>
 
@@ -389,6 +457,112 @@ const PortfolioContent: React.FC = () => {
             })
           )}
         </div>
+      </div>
+
+      {/* 图表区域 */}
+      <div className="charts-section">
+        {chartLoading ? (
+          <div className="loading-container">
+            <Spin size="large" />
+          </div>
+        ) : chartData && (chartData.dailyStats.length > 0 || chartData.poolDistribution.length > 0) ? (
+          <div className="charts-grid">
+            {/* 交易频率趋势 */}
+            {chartData.dailyStats.length > 0 && (
+              <div className="chart-card">
+                <div className="chart-card-header">
+                  <h3><LineChartOutlined /> Trade Frequency</h3>
+                </div>
+                <div className="chart-container">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={chartData.dailyStats.map(d => ({ ...d, date: formatBeijingDate(d.date) }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: 'rgba(255,255,255,0.65)', fontSize: 12 }}
+                        axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fill: 'rgba(255,255,255,0.65)', fontSize: 12 }}
+                        axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                        tickLine={false}
+                        allowDecimals={false}
+                      />
+                      <RechartsTooltip
+                        contentStyle={{
+                          background: 'rgba(0,0,0,0.85)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: 8,
+                          color: 'rgba(255,255,255,0.85)',
+                        }}
+                        labelStyle={{ color: 'rgba(255,255,255,0.65)' }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="swapCount"
+                        name="Swaps"
+                        stroke="#00b96b"
+                        strokeWidth={2}
+                        dot={{ fill: '#00b96b', r: 4 }}
+                        activeDot={{ r: 6, fill: '#00b96b' }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* 交易对分布 */}
+            {chartData.poolDistribution.length > 0 && (
+              <div className="chart-card">
+                <div className="chart-card-header">
+                  <h3><PieChartOutlined /> Pool Distribution</h3>
+                </div>
+                <div className="chart-container">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie
+                        data={chartData.poolDistribution.map((item) => ({
+                          name: `${item.token0Symbol}/${item.token1Symbol}`,
+                          value: item.count,
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={3}
+                        dataKey="value"
+                        label={(props: any) => {
+                          const { name, percent } = props
+                          return `${name} ${(percent * 100).toFixed(0)}%`
+                        }}
+                      >
+                        {chartData.poolDistribution.map((_, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={PIE_COLORS[index % PIE_COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        contentStyle={{
+                          background: 'rgba(0,0,0,0.85)',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          borderRadius: 8,
+                          color: 'rgba(255,255,255,0.85)',
+                        }}
+                      />
+                      <Legend
+                        wrapperStyle={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   )

@@ -77,19 +77,63 @@ export class PoolHistoryDto {
  */
 export class UserStatsDto {
   userAddress: string;
-  
+
   // 交易统计
   totalSwaps: number;
   totalSwapVolume: string;
-  
+
   // 流动性统计
   totalLiquidityAdds: number;
   totalLiquidityRemoves: number;
-  
+
   // 活跃池子
   activePools: number[];
-  
+
   // 最近活动时间
   lastActivityAt: Date;
+}
+
+/**
+ * 排行榜条目
+ */
+export class LeaderboardItemDto {
+  rank: number;
+  userAddress: string;
+  count: number;
+}
+
+/**
+ * 排行榜响应
+ */
+export class LeaderboardResponseDto {
+  period: string;          // '24h' | '7d' | '30d' | 'all'
+  type: string;            // 'swap' | 'liquidity'
+  data: LeaderboardItemDto[];
+}
+
+/**
+ * 用户每日交易统计
+ */
+export class UserDailyStatsDto {
+  date: string;            // 'YYYY-MM-DD'
+  swapCount: number;
+}
+
+/**
+ * 用户交易对分布
+ */
+export class UserPoolDistributionDto {
+  poolId: number;
+  token0Symbol: string;
+  token1Symbol: string;
+  count: number;
+}
+
+/**
+ * 用户图表数据
+ */
+export class UserChartDataDto {
+  dailyStats: UserDailyStatsDto[];
+  poolDistribution: UserPoolDistributionDto[];
 }
 

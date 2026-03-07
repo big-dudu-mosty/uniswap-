@@ -37,6 +37,15 @@ const PoolDetail: React.FC = () => {
       fetchPoolDetail()
       fetchSwapHistory()
       fetchLiquidityHistory()
+
+      // 每 10 秒自动刷新历史数据
+      const pollInterval = setInterval(() => {
+        fetchPoolDetail()
+        fetchSwapHistory()
+        fetchLiquidityHistory()
+      }, 10000)
+
+      return () => clearInterval(pollInterval)
     }
   }, [id])
 

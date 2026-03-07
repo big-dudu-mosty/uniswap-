@@ -777,8 +777,24 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
         decoded.args as any;
       const normalizedPair = pairAddress.toLowerCase();
 
+      // 获取交易信息以找到真实的用户地址（sender 是 Router 合约地址）
+      let realUserAddress = to.toLowerCase();
+      if (log.transactionHash) {
+        try {
+          const publicClient = this.blockchainProvider.getPublicClient();
+          const tx = await publicClient.getTransaction({
+            hash: log.transactionHash as `0x${string}`,
+          });
+          if (tx && tx.from) {
+            realUserAddress = tx.from.toLowerCase();
+          }
+        } catch (err) {
+          this.logger.warn(`Failed to get transaction for Swap event: ${err}`);
+        }
+      }
+
       this.logger.log(
-        `💱 Swap: ${normalizedPair} by ${sender} -> In(${amount0In}/${amount1In}) Out(${amount0Out}/${amount1Out})`,
+        `💱 Swap: ${normalizedPair} by ${realUserAddress} -> In(${amount0In}/${amount1In}) Out(${amount0Out}/${amount1Out})`,
       );
 
       // 查找对应的 Pool，不存在则自动创建
@@ -795,10 +811,9 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
         const amountOut = isToken0In ? amount1Out.toString() : amount0Out.toString();
 
         // 记录到 swap history 表
-        // 注意：sender 是 Router 合约地址，to 才是实际用户地址
         await this.historyService.createSwapHistory({
           poolId: pool.id,
-          userAddress: to.toLowerCase(), // 使用 to 作为用户地址（接收代币的地址）
+          userAddress: realUserAddress,
           toAddress: to.toLowerCase(),
           tokenIn,
           tokenOut,
@@ -806,7 +821,7 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
           amountOut,
           transactionHash: log.transactionHash || '',
           blockNumber: log.blockNumber?.toString() || '0',
-          blockTimestamp: 0, // 需要额外查询 block
+          blockTimestamp: 0,
           logIndex: Number(log.logIndex || 0),
         }).catch(err => {
           this.logger.warn(`Failed to save swap history: ${err.message}`);

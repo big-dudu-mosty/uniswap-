@@ -10,6 +10,7 @@ import PoolPage from './pages/Pool'
 import PoolDetail from './pages/PoolDetail'
 import PortfolioPage from './pages/Portfolio'
 import HistoryPage from './pages/History'
+import LeaderboardPage from './pages/Leaderboard'
 import Farms from './pages/Farms'
 import FarmDetail from './pages/FarmDetail'
 import MyFarms from './pages/MyFarms'
@@ -47,7 +48,9 @@ function App() {
                 <Route path="/pool" element={<PoolPage />} />
                 <Route path="/pool/:id" element={<PoolDetail />} />
                 <Route path="/portfolio" element={<PortfolioPage />} />
+                <Route path="/portfolio/:address" element={<PortfolioPage />} />
                 <Route path="/history" element={<HistoryPage />} />
+                <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/farms" element={<Farms />} />
                 <Route path="/farms/me" element={<MyFarms />} />
                 <Route path="/farms/:poolId" element={<FarmDetail />} />
