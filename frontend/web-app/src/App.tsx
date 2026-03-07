@@ -11,9 +11,6 @@ import PoolDetail from './pages/PoolDetail'
 import PortfolioPage from './pages/Portfolio'
 import HistoryPage from './pages/History'
 import LeaderboardPage from './pages/Leaderboard'
-import Farms from './pages/Farms'
-import FarmDetail from './pages/FarmDetail'
-import MyFarms from './pages/MyFarms'
 import './App.css'
 
 // 创建 React Query 客户端
@@ -51,9 +48,6 @@ function App() {
                 <Route path="/portfolio/:address" element={<PortfolioPage />} />
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
-                <Route path="/farms" element={<Farms />} />
-                <Route path="/farms/me" element={<MyFarms />} />
-                <Route path="/farms/:poolId" element={<FarmDetail />} />
               </Routes>
             </Layout>
           </BrowserRouter>

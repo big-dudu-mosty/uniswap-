@@ -6,7 +6,6 @@ import {
   AppstoreOutlined,
   WalletOutlined,
   HistoryOutlined,
-  FireOutlined,
   TrophyOutlined,
 } from '@ant-design/icons'
 import ConnectWallet from '../ConnectWallet'
@@ -36,11 +35,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       key: '/pool',
       icon: <AppstoreOutlined />,
       label: <Link to="/pool">Pool</Link>,
-    },
-    {
-      key: '/farms',
-      icon: <FireOutlined />,
-      label: <Link to="/farms">Farms</Link>,
     },
     {
       key: '/history',

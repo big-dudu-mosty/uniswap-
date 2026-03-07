@@ -305,43 +305,5 @@ export const apiService = {
     return tradingApi.get(`/analytics/user/${userAddress}/charts`)
   },
 
-  // ==================== Farming ====================
-
-  /**
-   * 获取所有挖矿池列表
-   */
-  getAllFarms: async (): Promise<any> => {
-    return tradingApi.get('/farms')
-  },
-
-  /**
-   * 获取单个池子详情
-   */
-  getFarm: async (poolId: number): Promise<any> => {
-    return tradingApi.get(`/farms/${poolId}`)
-  },
-
-  /**
-   * 手动同步池子数据
-   */
-  syncFarm: async (poolId: number): Promise<any> => {
-    return tradingApi.get(`/farms/${poolId}/sync`)
-  },
-
-  /**
-   * 获取用户在所有池子的质押情况
-   */
-  getUserFarms: async (userAddress: string): Promise<any> => {
-    return tradingApi.get(`/farms/user/${userAddress}`)
-  },
-
-  /**
-   * 获取质押排行榜
-   */
-  getFarmingLeaderboard: async (limit?: number): Promise<any> => {
-    return tradingApi.get('/farms/leaderboard/top', {
-      params: { limit: limit || 100 },
-    })
-  },
 }
 
