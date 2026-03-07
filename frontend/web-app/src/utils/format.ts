@@ -31,29 +31,6 @@ export const formatNumber = (num: string | number, decimals: number = 4): string
 }
 
 /**
- * 格式化代币数量
- */
-export const formatTokenAmount = (
-  amount: string | number,
-  decimals: number = 18
-): string => {
-  try {
-    const value = typeof amount === 'string' ? BigInt(amount) : BigInt(Math.floor(amount))
-    const divisor = BigInt(10 ** decimals)
-    const whole = value / divisor
-    const remainder = value % divisor
-    
-    // 保留有效小数位
-    const decimal = remainder.toString().padStart(decimals, '0').slice(0, 6)
-    const result = `${whole}.${decimal}`
-    
-    return parseFloat(result).toString()
-  } catch {
-    return '0'
-  }
-}
-
-/**
  * 解析代币数量（转换为最小单位）
  */
 export const parseTokenAmount = (
@@ -68,27 +45,6 @@ export const parseTokenAmount = (
   } catch {
     return '0'
   }
-}
-
-/**
- * 格式化地址（缩短显示）
- */
-export const formatAddress = (
-  address: string,
-  startLength: number = 6,
-  endLength: number = 4
-): string => {
-  if (!address || address.length < startLength + endLength) return address
-  return `${address.slice(0, startLength)}...${address.slice(-endLength)}`
-}
-
-/**
- * 格式化百分比
- */
-export const formatPercentage = (value: string | number): string => {
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (isNaN(num)) return '0%'
-  return `${num.toFixed(2)}%`
 }
 
 /**
@@ -132,20 +88,6 @@ export const formatTimestamp = (timestamp: string | number): string => {
   } catch {
     return '-'
   }
-}
-
-/**
- * 格式化交易哈希
- */
-export const formatTxHash = (hash: string): string => {
-  return formatAddress(hash, 10, 8)
-}
-
-/**
- * 检查是否为有效的以太坊地址
- */
-export const isValidAddress = (address: string): boolean => {
-  return /^0x[a-fA-F0-9]{40}$/.test(address)
 }
 
 /**

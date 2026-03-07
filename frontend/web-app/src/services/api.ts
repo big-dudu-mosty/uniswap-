@@ -44,11 +44,6 @@ const createApiClient = (baseURL: string): AxiosInstance => {
 }
 
 /**
- * Wallet Service API 客户端
- */
-export const walletApi = createApiClient(API_CONFIG.WALLET_SERVICE)
-
-/**
  * Trading Service API 客户端
  */
 export const tradingApi = createApiClient(API_CONFIG.TRADING_SERVICE)
@@ -66,68 +61,6 @@ export const apiService = {
     return tradingApi.post('/price/track', { tokenAddress, symbol }).catch(() => {
       // 注册失败不影响前端功能
     })
-  },
-
-  // ==================== Balance ====================
-  
-  /**
-   * 获取 ETH 余额
-   */
-  getEthBalance: async (address: string): Promise<any> => {
-    return walletApi.get(`/balance/eth/${address}`)
-  },
-
-  /**
-   * 获取代币余额
-   */
-  getTokenBalance: async (address: string, tokenAddress: string): Promise<any> => {
-    return walletApi.get(`/balance/token/${address}/${tokenAddress}`)
-  },
-
-  /**
-   * 批量获取余额
-   */
-  getBatchBalances: async (requests: Array<{
-    address: string
-    tokenAddress: string
-  }>): Promise<any> => {
-    return walletApi.post('/balance/batch', { requests })
-  },
-
-  /**
-   * 获取所有余额
-   */
-  getAllBalances: async (address: string): Promise<any> => {
-    return walletApi.get(`/balance/all/${address}`)
-  },
-
-  // ==================== Transaction ====================
-  
-  /**
-   * 获取交易列表
-   */
-  getTransactions: async (params?: {
-    page?: number
-    limit?: number
-  }): Promise<any> => {
-    return walletApi.get('/transaction', { params })
-  },
-
-  /**
-   * 根据哈希获取交易
-   */
-  getTransactionByHash: async (hash: string): Promise<any> => {
-    return walletApi.get(`/transaction/${hash}`)
-  },
-
-  /**
-   * 根据地址获取交易
-   */
-  getTransactionsByAddress: async (
-    address: string,
-    params?: { page?: number; limit?: number }
-  ): Promise<any> => {
-    return walletApi.get(`/transaction/address/${address}`, { params })
   },
 
   // ==================== Pool ====================
