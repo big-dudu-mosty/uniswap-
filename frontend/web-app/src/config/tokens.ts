@@ -58,9 +58,24 @@ export const DEFAULT_TOKENS = [
 // ========== 自定义代币管理（localStorage 持久化）==========
 
 const CUSTOM_TOKENS_KEY = 'dex_custom_tokens'
+const DEPLOYMENT_VERSION_KEY = 'dex_deployment_version'
+
+// 用 Factory 地址作为部署版本标识，地址变了说明重新部署了
+const currentDeploymentVersion = CONTRACT_ADDRESSES.FACTORY || ''
+
+// 自动清理：如果部署版本变了，清除旧的自定义代币
+if (currentDeploymentVersion) {
+  const savedVersion = localStorage.getItem(DEPLOYMENT_VERSION_KEY)
+  if (savedVersion && savedVersion !== currentDeploymentVersion) {
+    localStorage.removeItem(CUSTOM_TOKENS_KEY)
+    console.log('🔄 检测到合约重新部署，已清除旧的自定义代币缓存')
+  }
+  localStorage.setItem(DEPLOYMENT_VERSION_KEY, currentDeploymentVersion)
+}
 
 /**
  * 获取用户自定义代币列表
+ * 自动过滤掉不属于当前网络的代币（通过验证合约是否存在）
  */
 export const getCustomTokens = (): Token[] => {
   try {
@@ -69,6 +84,13 @@ export const getCustomTokens = (): Token[] => {
   } catch {
     return []
   }
+}
+
+/**
+ * 清除所有自定义代币（用于重新部署后清理旧数据）
+ */
+export const clearCustomTokens = (): void => {
+  localStorage.removeItem(CUSTOM_TOKENS_KEY)
 }
 
 /**

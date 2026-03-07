@@ -10,15 +10,22 @@ import { defaultChain, supportedChains } from './chains'
  * - 31337: Hardhat 本地测试链
  * - 11155111: Sepolia 测试网
  */
+const rpcUrl = import.meta.env.VITE_RPC_URL || defaultChain.rpcUrls.default.http[0]
+
 export const wagmiConfig = createConfig({
   chains: supportedChains as any,
   connectors: [
     injected({
-      // 不指定 target，自动检测
       shimDisconnect: true,
     }),
   ],
   transports: {
-    [defaultChain.id]: http(import.meta.env.VITE_RPC_URL || defaultChain.rpcUrls.default.http[0]),
+    [defaultChain.id]: http(rpcUrl, {
+      // Sepolia 使用 Infura 免费版，需要降低轮询频率避免限速
+      batch: true,
+      retryCount: 5,
+      retryDelay: 3000,
+    }),
   },
+  pollingInterval: defaultChain.id === 31337 ? 1_000 : 8_000,
 })

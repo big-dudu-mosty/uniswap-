@@ -39,6 +39,9 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
   private pollingInterval: NodeJS.Timeout;
   private lastProcessedBlock: bigint = 0n;
 
+  // 缓存链上已知的 pair 地址，避免每次都全量读取
+  private knownPairAddresses: Set<string> = new Set();
+
   // ABI 定义
   private readonly factoryAbi = parseAbi([
     'event PairCreated(address indexed token0, address indexed token1, address pair, uint)',
@@ -147,12 +150,15 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
     const factoryAddress = this.blockchainProvider.getFactoryAddress();
     const publicClient = this.blockchainProvider.getPublicClient();
 
-    this.logger.log('📊 Starting polling mode (checking every 5 seconds)...');
+    // 启动时从链上加载所有已有的 pair 地址
+    await this.refreshPairAddressesFromChain(publicClient, factoryAddress);
+
+    this.logger.log('📊 Starting polling mode (checking every 8 seconds)...');
 
     this.pollingInterval = setInterval(async () => {
       try {
         const currentBlock = await this.blockchainProvider.getBlockNumber();
-        
+
         if (currentBlock <= this.lastProcessedBlock) {
           return; // 没有新区块
         }
@@ -174,18 +180,12 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
           for (const log of pairCreatedLogs) {
             await this.handlePairCreatedEvent(log);
           }
+          // 有新 pair 创建，刷新缓存
+          await this.refreshPairAddressesFromChain(publicClient, factoryAddress);
         }
 
-        // 2. 获取所有 Pool 的地址（去重，避免大小写不一致导致重复处理）
-        const pools = await this.poolRepository.find();
-        const processedPairs = new Set<string>();
-
-        for (const pool of pools) {
-          if (!pool.pairAddress) continue;
-          const normalizedAddress = pool.pairAddress.toLowerCase();
-          if (processedPairs.has(normalizedAddress)) continue;
-          processedPairs.add(normalizedAddress);
-
+        // 2. 从链上缓存获取所有 pair 地址（不依赖数据库）
+        for (const normalizedAddress of this.knownPairAddresses) {
           // 获取该 Pair 的所有事件
           const pairLogs = await publicClient.getLogs({
             address: normalizedAddress as Address,
@@ -203,7 +203,84 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
         this.logger.error('Error in polling cycle', error);
         this.status.errors++;
       }
-    }, 5000); // 每 5 秒检查一次
+    }, 8000); // 每 8 秒检查一次
+  }
+
+  /**
+   * 从链上 Factory 读取所有 pair 地址，确保不遗漏任何交易对
+   * 同时将新发现的 pair 自动同步到数据库
+   */
+  private async refreshPairAddressesFromChain(
+    publicClient: any,
+    factoryAddress: Address,
+  ): Promise<void> {
+    try {
+      const allPairsLength = await publicClient.readContract({
+        address: factoryAddress,
+        abi: this.factoryReadAbi,
+        functionName: 'allPairsLength',
+      });
+
+      const count = Number(allPairsLength);
+
+      for (let i = 0; i < count; i++) {
+        const pairAddress = await publicClient.readContract({
+          address: factoryAddress,
+          abi: this.factoryReadAbi,
+          functionName: 'allPairs',
+          args: [BigInt(i)],
+        });
+
+        const normalized = (pairAddress as string).toLowerCase();
+
+        if (!this.knownPairAddresses.has(normalized)) {
+          this.knownPairAddresses.add(normalized);
+          this.logger.log(`📡 Tracking pair from chain: ${normalized}`);
+        }
+      }
+
+      this.logger.log(`📡 Tracking ${this.knownPairAddresses.size} pairs from chain`);
+    } catch (error) {
+      this.logger.error('Failed to refresh pair addresses from chain', error);
+      // 降级：如果链上读取失败，从数据库补充
+      const pools = await this.poolRepository.find();
+      for (const pool of pools) {
+        if (pool.pairAddress) {
+          this.knownPairAddresses.add(pool.pairAddress.toLowerCase());
+        }
+      }
+    }
+  }
+
+  /**
+   * 确保 pool 存在于数据库中（收到 Mint/Swap/Burn 事件时按需创建）
+   * 只在有实际交易活动时才创建，而非提前预建
+   */
+  private async ensurePoolInDatabase(pairAddress: Address): Promise<Pool | null> {
+    try {
+      const publicClient = this.blockchainProvider.getPublicClient();
+      const pairAbi = parseAbi([
+        'function token0() view returns (address)',
+        'function token1() view returns (address)',
+      ]);
+
+      const [token0, token1] = await Promise.all([
+        publicClient.readContract({ address: pairAddress, abi: pairAbi, functionName: 'token0' }),
+        publicClient.readContract({ address: pairAddress, abi: pairAbi, functionName: 'token1' }),
+      ]);
+
+      const pool = this.poolRepository.create({
+        pairAddress: pairAddress.toLowerCase(),
+        token0Address: (token0 as string).toLowerCase(),
+        token1Address: (token1 as string).toLowerCase(),
+      });
+      const saved = await this.poolRepository.save(pool);
+      this.logger.log(`✅ Pool auto-created on first activity: ${pairAddress}`);
+      return saved;
+    } catch (error) {
+      this.logger.error(`Failed to create pool ${pairAddress}`, error);
+      return null;
+    }
   }
 
   /**
@@ -563,8 +640,12 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
         `➕ Mint: ${normalizedPair} by ${realUserAddress} -> ${amount0}/${amount1}`,
       );
 
-      // 查找对应的 Pool
-      const pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
+      // 查找对应的 Pool，不存在则自动创建（用户首次添加流动性时触发）
+      let pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
+      if (!pool) {
+        this.logger.log(`🔄 Pool not in database, auto-creating from Mint event: ${normalizedPair}`);
+        pool = await this.ensurePoolInDatabase(normalizedPair as Address);
+      }
       if (pool) {
         // 记录到 liquidity history 表
         await this.historyService.createLiquidityHistory({
@@ -637,8 +718,11 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
         `➖ Burn: ${normalizedPair} by ${realUserAddress} -> ${amount0}/${amount1}`,
       );
 
-      // 查找对应的 Pool
-      const pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
+      // 查找对应的 Pool，不存在则自动创建
+      let pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
+      if (!pool) {
+        pool = await this.ensurePoolInDatabase(normalizedPair as Address);
+      }
       if (pool) {
         // 记录到 liquidity history 表
         await this.historyService.createLiquidityHistory({
@@ -697,8 +781,11 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
         `💱 Swap: ${normalizedPair} by ${sender} -> In(${amount0In}/${amount1In}) Out(${amount0Out}/${amount1Out})`,
       );
 
-      // 查找对应的 Pool
-      const pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
+      // 查找对应的 Pool，不存在则自动创建
+      let pool = await this.poolRepository.findOne({ where: { pairAddress: normalizedPair } });
+      if (!pool) {
+        pool = await this.ensurePoolInDatabase(normalizedPair as Address);
+      }
       if (pool) {
         // 判断输入/输出代币
         const isToken0In = amount0In > 0n;

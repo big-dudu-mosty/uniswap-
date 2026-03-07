@@ -71,41 +71,43 @@ export const useLiquidity = () => {
       })
 
       message.loading({ content: `${tokenSymbol || '代币'} 授权交易已提交，等待确认...`, key: 'approve', duration: 0 })
-      
-      // 等待交易确认（本地网络快速确认）
-      // 设置超时时间为 30 秒
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Transaction timeout')), 30000)
+
+      // 等待交易确认
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Transaction timeout')), 120000)
       )
-      
-      const receiptPromise = publicClient?.waitForTransactionReceipt({ 
+
+      const receiptPromise = publicClient?.waitForTransactionReceipt({
         hash,
-        confirmations: 1, // 本地网络只需要 1 个确认
+        confirmations: 1,
       })
-      
+
       await Promise.race([receiptPromise, timeoutPromise])
-      
+
       message.success({ content: `✅ ${tokenSymbol || '代币'} 授权成功！`, key: 'approve' })
       return true
     } catch (error: any) {
       console.error('Approval failed:', error)
-      
+
       // 销毁 loading 消息
       message.destroy('approve')
-      
-      // 判断错误类型并提供详细错误信息
+
+      // 如果是 HTTP/超时错误，授权可能已经成功，允许继续
+      if (error.message?.includes('HTTP request failed') || error.message?.includes('Transaction timeout')) {
+        message.warning('授权交易已提交，确认超时。继续尝试下一步...')
+        return true // 返回 true 让流程继续
+      }
+
       if (error.message?.includes('User rejected') || error.message?.includes('rejected')) {
         message.warning('您取消了授权')
-      } else if (error.message?.includes('timeout')) {
-        message.error('授权交易超时，请检查网络连接后重试')
       } else if (error.message?.includes('aborted')) {
-        message.error('授权请求被中止，可能的原因：\n1. Gas limit 不足\n2. 网络连接问题\n3. 节点响应超时\n\n请刷新页面后重试')
+        message.error('授权请求被中止，请刷新页面后重试')
       } else if (error.message?.includes('insufficient funds')) {
         message.error('账户余额不足以支付 Gas 费用')
       } else if (error.shortMessage) {
         message.error(`授权失败: ${error.shortMessage}`)
       } else {
-        message.error(`授权失败: ${error.message || '未知错误'}\n\n建议：\n1. 刷新页面重试\n2. 检查 MetaMask 连接\n3. 确认账户有足够 ETH 支付 Gas`)
+        message.error(`授权失败: ${error.message || '未知错误'}`)
       }
       return false
     }
@@ -185,27 +187,27 @@ export const useLiquidity = () => {
 
         message.loading({ content: '添加流动性交易已提交...', key: 'addLiq', duration: 0 })
         
-        // 设置超时时间为 30 秒
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Transaction timeout')), 30000)
+        // 设置超时时间为 120 秒（Sepolia 出块约 12 秒，留足余量）
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Transaction timeout')), 120000)
         )
-        
-        const receiptPromise = publicClient?.waitForTransactionReceipt({ 
+
+        const receiptPromise = publicClient?.waitForTransactionReceipt({
           hash,
           confirmations: 1,
         })
-        
+
         const receipt = await Promise.race([receiptPromise, timeoutPromise])
-        
+
         if (receipt?.status === 'success') {
           message.destroy('addLiq')
           message.success('🎉 添加流动性成功！')
-          
-          // 刷新 Pool 数据（使用 WETH 地址）
-          apiService.refreshPoolByTokens(tokenA, tokenB).catch(err => {
+
+          // 刷新 Pool 数据（等待完成，确保导航到 Pool 页面时数据已就绪）
+          await apiService.refreshPoolByTokens(tokenA, tokenB).catch(err => {
             console.warn('Pool refresh failed (non-critical):', err)
           })
-          
+
           return hash
         } else {
           message.destroy('addLiq')
@@ -213,7 +215,7 @@ export const useLiquidity = () => {
           return null
         }
       }
-      
+
       // 情况2: ERC20 + ERC20
       else {
         // 1. 授权 TokenA
@@ -254,25 +256,25 @@ export const useLiquidity = () => {
 
         message.loading({ content: '添加流动性交易已提交...', key: 'addLiq', duration: 0 })
         
-        // 4. 等待交易确认（本地网络快速确认）
-        // 设置超时时间为 30 秒
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Transaction timeout')), 30000)
+        // 4. 等待交易确认
+        // 设置超时时间为 120 秒（Sepolia 出块约 12 秒，留足余量）
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Transaction timeout')), 120000)
         )
-        
-        const receiptPromise = publicClient?.waitForTransactionReceipt({ 
+
+        const receiptPromise = publicClient?.waitForTransactionReceipt({
           hash,
           confirmations: 1,
         })
-        
+
         const receipt = await Promise.race([receiptPromise, timeoutPromise])
         
         if (receipt?.status === 'success') {
           message.destroy('addLiq')
           message.success('🎉 添加流动性成功！')
-          
-          // 5. 自动刷新 Pool 数据
-          apiService.refreshPoolByTokens(tokenA, tokenB).catch(err => {
+
+          // 等待 Pool 数据刷新完成
+          await apiService.refreshPoolByTokens(tokenA, tokenB).catch(err => {
             console.warn('Pool refresh failed (non-critical):', err)
           })
           
@@ -296,6 +298,8 @@ export const useLiquidity = () => {
         message.warning('操作被中止，请重试')
       } else if (error.message?.includes('insufficient')) {
         message.error('余额不足')
+      } else if (error.message?.includes('HTTP request failed') || error.message?.includes('Transaction timeout')) {
+        message.warning('交易已提交，但确认超时。请在区块浏览器中查看交易状态。')
       } else if (error.shortMessage) {
         message.error(`添加流动性失败: ${error.shortMessage}`)
       } else {
@@ -390,9 +394,9 @@ export const useLiquidity = () => {
 
       message.loading({ content: '移除流动性交易已提交...', key: 'removeLiq', duration: 0 })
 
-      // 设置超时时间为 30 秒
+      // 设置超时时间为 120 秒
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Transaction timeout')), 30000)
+        setTimeout(() => reject(new Error('Transaction timeout')), 120000)
       )
 
       const receiptPromise = publicClient?.waitForTransactionReceipt({
@@ -425,8 +429,8 @@ export const useLiquidity = () => {
 
       if (error.message?.includes('User rejected') || error.message?.includes('rejected')) {
         message.warning('您取消了操作')
-      } else if (error.message?.includes('timeout')) {
-        message.error('移除流动性交易超时，请检查网络连接后重试')
+      } else if (error.message?.includes('HTTP request failed') || error.message?.includes('timeout')) {
+        message.warning('交易已提交，但确认超时。请在区块浏览器中查看交易状态。')
       } else if (error.message?.includes('aborted')) {
         message.warning('操作被中止，请重试')
       } else if (error.message?.includes('insufficient')) {

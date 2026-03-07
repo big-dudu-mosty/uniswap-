@@ -33,22 +33,30 @@ export class PoolUsdService {
       ]);
 
       // 计算流动性 USD 价值（需要先标准化储备量）
+      const decimals0 = poolDto.token0Decimals || 18;
+      const decimals1 = poolDto.token1Decimals || 18;
+      const normalizedReserve0 = Number(BigInt(poolDto.reserve0 || '0')) / Math.pow(10, decimals0);
+      const normalizedReserve1 = Number(BigInt(poolDto.reserve1 || '0')) / Math.pow(10, decimals1);
+
       if (token0Price && token1Price) {
-        const decimals0 = poolDto.token0Decimals || 18;
-        const decimals1 = poolDto.token1Decimals || 18;
-
-        // 将原始储备量转换为标准化数值
-        const normalizedReserve0 = Number(BigInt(poolDto.reserve0 || '0')) / Math.pow(10, decimals0);
-        const normalizedReserve1 = Number(BigInt(poolDto.reserve1 || '0')) / Math.pow(10, decimals1);
-
+        // 两个代币都有价格，精确计算
         const reserve0Usd = normalizedReserve0 * parseFloat(token0Price.priceUsd);
         const reserve1Usd = normalizedReserve1 * parseFloat(token1Price.priceUsd);
         const liquidityUsd = reserve0Usd + reserve1Usd;
 
         poolDto.liquidityUsd = liquidityUsd.toFixed(2);
 
-        // 添加代币价格信息（扩展字段）
         (poolDto as any).token0PriceUsd = token0Price.priceUsd;
+        (poolDto as any).token1PriceUsd = token1Price.priceUsd;
+      } else if (token0Price) {
+        // 只有 token0 有价格，用 reserve0 * price0 * 2 估算
+        const reserve0Usd = normalizedReserve0 * parseFloat(token0Price.priceUsd);
+        poolDto.liquidityUsd = (reserve0Usd * 2).toFixed(2);
+        (poolDto as any).token0PriceUsd = token0Price.priceUsd;
+      } else if (token1Price) {
+        // 只有 token1 有价格，用 reserve1 * price1 * 2 估算
+        const reserve1Usd = normalizedReserve1 * parseFloat(token1Price.priceUsd);
+        poolDto.liquidityUsd = (reserve1Usd * 2).toFixed(2);
         (poolDto as any).token1PriceUsd = token1Price.priceUsd;
       }
 
@@ -86,17 +94,22 @@ export class PoolUsdService {
           this.priceService.getTokenPrice(pool.token1Address).catch(() => null),
         ]);
 
-        if (token0Price && token1Price) {
+        if (token0Price || token1Price) {
           const decimals0 = pool.token0Decimals || 18;
           const decimals1 = pool.token1Decimals || 18;
 
-          // 将原始储备量转换为标准化数值
           const normalizedReserve0 = Number(BigInt(pool.reserve0 || '0')) / Math.pow(10, decimals0);
           const normalizedReserve1 = Number(BigInt(pool.reserve1 || '0')) / Math.pow(10, decimals1);
 
-          const reserve0Usd = normalizedReserve0 * parseFloat(token0Price.priceUsd);
-          const reserve1Usd = normalizedReserve1 * parseFloat(token1Price.priceUsd);
-          totalTvl += reserve0Usd + reserve1Usd;
+          if (token0Price && token1Price) {
+            const reserve0Usd = normalizedReserve0 * parseFloat(token0Price.priceUsd);
+            const reserve1Usd = normalizedReserve1 * parseFloat(token1Price.priceUsd);
+            totalTvl += reserve0Usd + reserve1Usd;
+          } else if (token0Price) {
+            totalTvl += normalizedReserve0 * parseFloat(token0Price.priceUsd) * 2;
+          } else if (token1Price) {
+            totalTvl += normalizedReserve1 * parseFloat(token1Price.priceUsd) * 2;
+          }
         }
       } catch (error) {
         this.logger.warn(`Failed to calculate TVL for pool ${pool.id}`);

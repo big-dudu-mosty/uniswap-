@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Card, Tabs, Table, Tag, Button, Empty, Spin, Typography, message, Tooltip } from 'antd'
 import { SwapOutlined, PlusOutlined, MinusOutlined, LinkOutlined } from '@ant-design/icons'
 import { useWallet } from '../../hooks/useWallet'
+import { defaultChain } from '../../config/chains'
 import { apiService } from '../../services/api'
 import { formatUnits } from 'viem'
 import { formatBeijingTime, formatRelativeTime } from '../../utils/time'
@@ -118,11 +119,20 @@ const History: React.FC = () => {
 
   useEffect(() => {
     if (isConnected && address) {
-      if (activeTab === 'swaps') {
-        loadSwapHistory()
-      } else {
-        loadLiquidityHistory()
+      const loadData = () => {
+        if (activeTab === 'swaps') {
+          loadSwapHistory()
+        } else {
+          loadLiquidityHistory()
+        }
       }
+
+      loadData()
+
+      // 每 10 秒自动刷新历史记录
+      const pollInterval = setInterval(loadData, 10000)
+
+      return () => clearInterval(pollInterval)
     }
   }, [address, isConnected, activeTab, swapPage, liquidityPage])
 
@@ -196,7 +206,7 @@ const History: React.FC = () => {
         <Button
           type="link"
           icon={<LinkOutlined />}
-          href={`https://etherscan.io/tx/${record.transactionHash}`}
+          href={`${defaultChain.blockExplorers?.default?.url || 'https://sepolia.etherscan.io'}/tx/${record.transactionHash}`}
           target="_blank"
           size="small"
         >
@@ -271,7 +281,7 @@ const History: React.FC = () => {
         <Button
           type="link"
           icon={<LinkOutlined />}
-          href={`https://etherscan.io/tx/${record.transactionHash}`}
+          href={`${defaultChain.blockExplorers?.default?.url || 'https://sepolia.etherscan.io'}/tx/${record.transactionHash}`}
           target="_blank"
           size="small"
         >

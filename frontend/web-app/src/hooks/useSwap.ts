@@ -78,7 +78,7 @@ export const useSwap = () => {
       // 等待交易确认（本地网络通常 1-2 秒）
       // 设置超时时间为 30 秒
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Transaction timeout')), 30000)
+        setTimeout(() => reject(new Error('Transaction timeout')), 120000)
       )
       
       const receiptPromise = publicClient?.waitForTransactionReceipt({ 
@@ -92,23 +92,26 @@ export const useSwap = () => {
       return true
     } catch (error: any) {
       console.error('Approval failed:', error)
-      
+
       // 销毁 loading 消息
       message.destroy('approve')
-      
-      // 判断错误类型并提供详细错误信息
+
+      // 如果是 HTTP/超时错误，授权可能已经成功，允许继续
+      if (error.message?.includes('HTTP request failed') || error.message?.includes('Transaction timeout')) {
+        message.warning('授权交易已提交，确认超时。继续尝试下一步...')
+        return true
+      }
+
       if (error.message?.includes('User rejected') || error.message?.includes('rejected')) {
         message.warning('您取消了授权')
-      } else if (error.message?.includes('timeout')) {
-        message.error('授权交易超时，请检查网络连接后重试')
       } else if (error.message?.includes('aborted')) {
-        message.error('授权请求被中止，可能的原因：\n1. Gas limit 不足\n2. 网络连接问题\n3. 节点响应超时\n\n请刷新页面后重试')
+        message.error('授权请求被中止，请刷新页面后重试')
       } else if (error.message?.includes('insufficient funds')) {
         message.error('账户余额不足以支付 Gas 费用')
       } else if (error.shortMessage) {
         message.error(`授权失败: ${error.shortMessage}`)
       } else {
-        message.error(`授权失败: ${error.message || '未知错误'}\n\n建议：\n1. 刷新页面重试\n2. 检查 MetaMask 连接\n3. 确认账户有足够 ETH 支付 Gas`)
+        message.error(`授权失败: ${error.message || '未知错误'}`)
       }
       return false
     }
@@ -165,7 +168,7 @@ export const useSwap = () => {
       // 3. 等待交易确认（本地网络快速确认）
       // 设置超时时间为 30 秒
       const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Transaction timeout')), 30000)
+        setTimeout(() => reject(new Error('Transaction timeout')), 120000)
       )
       
       const receiptPromise = publicClient?.waitForTransactionReceipt({ 
@@ -198,8 +201,8 @@ export const useSwap = () => {
       // 判断错误类型并提供详细错误信息
       if (error.message?.includes('User rejected') || error.message?.includes('rejected')) {
         message.warning('您取消了交易')
-      } else if (error.message?.includes('timeout')) {
-        message.error('交易超时，请检查网络连接后重试')
+      } else if (error.message?.includes('HTTP request failed') || error.message?.includes('timeout')) {
+        message.warning('交易已提交，但确认超时。请在区块浏览器中查看交易状态。')
       } else if (error.message?.includes('aborted')) {
         message.error('交易请求被中止，可能的原因：\n1. Gas limit 不足\n2. 滑点设置过低\n3. 网络连接问题\n\n请调整滑点或刷新页面后重试')
       } else if (error.message?.includes('insufficient')) {

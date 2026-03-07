@@ -85,27 +85,8 @@ async function main() {
   console.log("✅ DEX Router 部署成功:", routerAddress);
   console.log("");
 
-  // ==================== 4. 创建交易对 ====================
-  console.log("📝 步骤 4: 创建交易对...");
-
-  // 创建 USDT/DAI 交易对
-  const tx1 = await factory.createPair(tokenAAddress, tokenBAddress);
-  await tx1.wait();
-  const pairAB = await factory.getPair(tokenAAddress, tokenBAddress);
-  console.log("✅ USDT/DAI 交易对创建成功:", pairAB);
-
-  // 创建 USDT/USDC 交易对
-  const tx2 = await factory.createPair(tokenAAddress, tokenCAddress);
-  await tx2.wait();
-  const pairAC = await factory.getPair(tokenAAddress, tokenCAddress);
-  console.log("✅ USDT/USDC 交易对创建成功:", pairAC);
-
-  // 创建 DAI/WETH 交易对
-  const tx3 = await factory.createPair(tokenBAddress, wethAddress);
-  await tx3.wait();
-  const pairBW = await factory.getPair(tokenBAddress, wethAddress);
-  console.log("✅ DAI/WETH 交易对创建成功:", pairBW);
-
+  // 交易对将在用户添加流动性时由 Router 自动创建，无需预先创建
+  console.log("📝 步骤 4: 跳过（交易对将在添加流动性时自动创建）");
   console.log("");
 
   // ==================== 5. 输出部署信息 ====================
@@ -123,11 +104,6 @@ async function main() {
   console.log("  USDT:", tokenAAddress);
   console.log("  DAI:", tokenBAddress);
   console.log("  USDC:", tokenCAddress);
-  console.log("");
-  console.log("Pairs:");
-  console.log("  USDT/DAI:", pairAB);
-  console.log("  USDT/USDC:", pairAC);
-  console.log("  DAI/WETH:", pairBW);
   console.log("====================================================\n");
 
   // 生成环境变量文件
@@ -144,11 +120,6 @@ WETH_ADDRESS=${wethAddress}
 USDT_ADDRESS=${tokenAAddress}
 DAI_ADDRESS=${tokenBAddress}
 USDC_ADDRESS=${tokenCAddress}
-
-# 交易对合约
-PAIR_USDT_DAI=${pairAB}
-PAIR_USDT_USDC=${pairAC}
-PAIR_DAI_WETH=${pairBW}
 
 # 部署账户
 DEPLOYER_ADDRESS=${deployer.address}

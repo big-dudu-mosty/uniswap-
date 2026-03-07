@@ -106,7 +106,7 @@ export class FarmingListenerService implements OnModuleInit, OnModuleDestroy {
   private async startPolling(): Promise<void> {
     const publicClient = this.blockchainProvider.getPublicClient();
 
-    this.logger.log('🔄 Starting farming events polling (every 5 seconds)...');
+    this.logger.log('🔄 Starting farming events polling (every 30 seconds)...');
 
     this.pollingInterval = setInterval(async () => {
       try {
@@ -139,7 +139,7 @@ export class FarmingListenerService implements OnModuleInit, OnModuleDestroy {
       } catch (error) {
         this.logger.error('Error in farming polling cycle:', error);
       }
-    }, 5000); // 每 5 秒检查一次
+    }, 30000); // 每 30 秒检查一次
   }
 
   /**

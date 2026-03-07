@@ -31,9 +31,9 @@ export class PoolSyncSchedulerService {
   ) {}
 
   /**
-   * 每 30 秒执行一次全量同步（Fallback）
+   * 每 2 分钟执行一次全量同步（Fallback）
    */
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron('*/2 * * * *')
   async syncAllPools() {
     if (this.isSyncing) {
       this.logger.debug('Sync already in progress, skipping...');

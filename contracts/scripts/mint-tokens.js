@@ -31,7 +31,8 @@ async function main() {
   }
   
   // 目标地址（从命令行参数获取，或使用默认账户）
-  const targetAddress = process.argv[2] || '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
+  const [deployer] = await hre.ethers.getSigners();
+  const targetAddress = process.argv[2] || deployer.address;
   
   console.log('\n🪙 开始 mint 测试代币...\n');
   console.log('📋 信息:');

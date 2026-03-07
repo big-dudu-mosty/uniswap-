@@ -226,9 +226,9 @@ export class PriceService {
   }
 
   /**
-   * 定时任务：每 30 秒刷新一次价格
+   * 定时任务：每 2 分钟刷新一次价格
    */
-  @Cron(CronExpression.EVERY_30_SECONDS)
+  @Cron('*/2 * * * *')
   async refreshAllPrices(): Promise<void> {
     if (!this.priceOracleAddress) {
       return;

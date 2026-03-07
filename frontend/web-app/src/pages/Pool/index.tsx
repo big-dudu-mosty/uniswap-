@@ -106,10 +106,15 @@ const PoolPage: React.FC = () => {
       console.log('Pool response:', response) // 调试日志
       
       if (response && response.pools) {
-        setPools(response.pools || [])
+        const nonEmptyPools = (response.pools || []).filter((p: Pool) =>
+          parseFloat(p.reserve0 || '0') > 0 || parseFloat(p.reserve1 || '0') > 0
+        )
+        setPools(nonEmptyPools)
       } else if (response && Array.isArray(response)) {
-        // 兼容直接返回数组的情况
-        setPools(response)
+        const nonEmptyPools = response.filter((p: Pool) =>
+          parseFloat(p.reserve0 || '0') > 0 || parseFloat(p.reserve1 || '0') > 0
+        )
+        setPools(nonEmptyPools)
       }
     } catch (error) {
       console.error('Failed to fetch pools:', error)
@@ -122,17 +127,23 @@ const PoolPage: React.FC = () => {
   useEffect(() => {
     fetchPools()
     fetchOverview()
-    
+
     // 当页面获得焦点时自动刷新
     const handleFocus = () => {
       fetchPools()
       fetchOverview()
     }
-    
+
     window.addEventListener('focus', handleFocus)
-    
+
+    // 每 10 秒自动刷新池子数据
+    const pollInterval = setInterval(() => {
+      fetchPools()
+    }, 10000)
+
     return () => {
       window.removeEventListener('focus', handleFocus)
+      clearInterval(pollInterval)
     }
   }, [])
 
