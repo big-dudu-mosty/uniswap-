@@ -96,12 +96,6 @@ const usdValue = await priceService.calculateUsdValue(
 - [ ] 在 toDto() 中计算 liquidityUsd
 - [ ] 添加 token0PriceUsd 和 token1PriceUsd 字段
 
-### FarmingService 集成
-- [ ] 注入 PriceService  
-- [ ] 更新 tvl 和 totalStakedUsd 使用实际 USD 价格
-- [ ] 更新 dexPrice 使用实际价格
-- [ ] 计算用户质押的实际 USD 价值
-
 ### AnalyticsService 集成
 - [ ] 在统计数据中添加 USD 价值
 - [ ] TVL 使用实际价格计算

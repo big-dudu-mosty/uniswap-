@@ -2,17 +2,12 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   createPublicClient,
-  createWalletClient,
   http,
   webSocket,
   parseAbi,
   PublicClient,
-  WalletClient,
   Address,
-  parseUnits,
-  formatUnits,
 } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
 import { hardhat, sepolia } from 'viem/chains';
 import type { Chain } from 'viem';
 
@@ -25,8 +20,6 @@ export class BlockchainProvider implements OnModuleInit {
   private readonly logger = new Logger(BlockchainProvider.name);
   private publicClient: PublicClient;
   private wsClient: PublicClient;
-  private walletClient: WalletClient | null = null;
-  private walletAccount: any = null;
 
   // DEX 合约地址
   private factoryAddress: Address;
@@ -84,23 +77,6 @@ export class BlockchainProvider implements OnModuleInit {
     }
 
     this.logger.log('Blockchain clients initialized successfully');
-
-    // Wallet 客户端（用于发送交易，如自动添加挖矿池）
-    const privateKey = this.configService.get<string>('trading.privateKey');
-    if (privateKey) {
-      try {
-        const account = privateKeyToAccount(privateKey as `0x${string}`);
-        this.walletAccount = account;
-        this.walletClient = createWalletClient({
-          account,
-          chain: this.getChain(),
-          transport: http(rpcUrl),
-        });
-        this.logger.log(`Wallet client initialized: ${account.address}`);
-      } catch (error) {
-        this.logger.warn('Wallet client initialization failed (non-critical)', error);
-      }
-    }
   }
 
   /**
@@ -428,51 +404,6 @@ export class BlockchainProvider implements OnModuleInit {
    */
   getPublicClient(): PublicClient {
     return this.publicClient;
-  }
-
-  /**
-   * 获取 Wallet Client（可能为 null）
-   */
-  getWalletClient(): WalletClient | null {
-    return this.walletClient;
-  }
-
-  /**
-   * 向 MasterChef 添加挖矿池
-   */
-  async addFarmPool(
-    masterChefAddress: Address,
-    allocPoint: number,
-    lpTokenAddress: Address,
-  ): Promise<string | null> {
-    if (!this.walletClient) {
-      this.logger.warn('Cannot add farm pool: wallet client not initialized (set TRADING_PRIVATE_KEY)');
-      return null;
-    }
-
-    const masterChefAbi = parseAbi([
-      'function add(uint256 _allocPoint, address _lpToken, bool _withUpdate)',
-      'function poolLength() view returns (uint256)',
-    ]);
-
-    try {
-      const hash = await this.walletClient.writeContract({
-        chain: this.getChain(),
-        account: this.walletAccount,
-        address: masterChefAddress,
-        abi: masterChefAbi,
-        functionName: 'add',
-        args: [BigInt(allocPoint), lpTokenAddress, true],
-      });
-
-      // 等待交易确认
-      const receipt = await this.publicClient.waitForTransactionReceipt({ hash });
-      this.logger.log(`Farm pool added: ${lpTokenAddress} (tx: ${hash})`);
-      return hash;
-    } catch (error) {
-      this.logger.error(`Failed to add farm pool ${lpTokenAddress}: ${error.message}`);
-      return null;
-    }
   }
 }
 

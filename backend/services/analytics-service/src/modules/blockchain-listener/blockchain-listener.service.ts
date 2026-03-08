@@ -52,11 +52,6 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
     'function allPairs(uint256) view returns (address)',
   ]);
 
-  private readonly masterChefReadAbi = parseAbi([
-    'function poolLength() view returns (uint256)',
-    'function poolInfo(uint256) view returns (address lpToken, uint256 allocPoint, uint256 lastRewardBlock, uint256 accRewardPerShare)',
-  ]);
-
   private readonly pairAbi = parseAbi([
     'event Sync(uint112 reserve0, uint112 reserve1)',
     'event Mint(address indexed sender, uint amount0, uint amount1)',
@@ -115,11 +110,6 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       this.status.isRunning = true;
       this.status.startTime = new Date();
       this.logger.log('✅ Event listener started successfully');
-
-      // 启动后自动检查并补齐 MasterChef 中缺失的 farming 池
-      this.reconcileFarmPools().catch((error) => {
-        this.logger.error('Failed to reconcile farm pools:', error);
-      });
     } catch (error) {
       this.logger.error('Failed to start event listener', error);
       throw error;
@@ -284,93 +274,6 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
   }
 
   /**
-   * 对账 Factory 所有交易对与 MasterChef 挖矿池
-   * 确保所有交易对都被添加到 MasterChef 中
-   */
-  private async reconcileFarmPools(): Promise<void> {
-    const masterChefAddress = this.configService.get<string>('MASTER_CHEF_ADDRESS');
-    if (!masterChefAddress) {
-      this.logger.debug('MasterChef not configured, skipping farm reconciliation');
-      return;
-    }
-
-    const factoryAddress = this.blockchainProvider.getFactoryAddress();
-    if (!factoryAddress) {
-      return;
-    }
-
-    const publicClient = this.blockchainProvider.getPublicClient();
-
-    try {
-      // 1. 读取 Factory 上所有 pair 数量
-      const allPairsLength = await publicClient.readContract({
-        address: factoryAddress,
-        abi: this.factoryReadAbi,
-        functionName: 'allPairsLength',
-      }) as bigint;
-
-      // 2. 读取 MasterChef 上所有池子，收集已注册的 LP Token 地址
-      const mcPoolLength = await publicClient.readContract({
-        address: masterChefAddress as `0x${string}`,
-        abi: this.masterChefReadAbi,
-        functionName: 'poolLength',
-      }) as bigint;
-
-      const registeredLpTokens = new Set<string>();
-      for (let i = 0n; i < mcPoolLength; i++) {
-        const poolInfo = await publicClient.readContract({
-          address: masterChefAddress as `0x${string}`,
-          abi: this.masterChefReadAbi,
-          functionName: 'poolInfo',
-          args: [i],
-        }) as [string, bigint, bigint, bigint];
-        registeredLpTokens.add(poolInfo[0].toLowerCase());
-      }
-
-      this.logger.log(
-        `🔍 Farm reconciliation: Factory has ${allPairsLength} pairs, MasterChef has ${mcPoolLength} pools`,
-      );
-
-      // 3. 遍历 Factory 所有 pair，找出未注册的
-      let added = 0;
-      for (let i = 0n; i < allPairsLength; i++) {
-        const pairAddress = await publicClient.readContract({
-          address: factoryAddress,
-          abi: this.factoryReadAbi,
-          functionName: 'allPairs',
-          args: [i],
-        }) as string;
-
-        if (!registeredLpTokens.has(pairAddress.toLowerCase())) {
-          // 此 pair 未在 MasterChef 注册，自动添加
-          this.logger.log(`🌾 Missing farm pool detected: ${pairAddress}, adding...`);
-
-          const txHash = await this.blockchainProvider.addFarmPool(
-            masterChefAddress as Address,
-            100, // 默认权重
-            pairAddress as Address,
-          );
-
-          if (txHash) {
-            this.logger.log(`✅ Auto-added missing pair ${pairAddress} to MasterChef`);
-            added++;
-          } else {
-            this.logger.warn(`⚠️  Failed to add pair ${pairAddress} to MasterChef`);
-          }
-        }
-      }
-
-      if (added > 0) {
-        this.logger.log(`🌾 Farm reconciliation complete: added ${added} missing pool(s)`);
-      } else {
-        this.logger.log('✅ Farm reconciliation: all pairs are registered in MasterChef');
-      }
-    } catch (error) {
-      this.logger.error('Error during farm pool reconciliation:', error);
-    }
-  }
-
-  /**
    * 处理 PairCreated 事件
    */
   private async handlePairCreatedEvent(log: Log): Promise<void> {
@@ -458,61 +361,9 @@ export class BlockchainListenerService implements OnModuleInit, OnModuleDestroy 
       } else {
         this.logger.debug(`Pool already exists in DB: ${event.pair}`);
       }
-
-      // 无论 Pool 是否已存在于 DB，都要确保已添加到 MasterChef
-      await this.ensureFarmPool(pairAddress);
     } catch (error) {
       this.logger.error('Error handling PairCreated event', error);
       this.status.errors++;
-    }
-  }
-
-  /**
-   * 确保 pair 已注册到 MasterChef
-   */
-  private async ensureFarmPool(pairAddress: Address): Promise<void> {
-    const masterChefAddress = this.configService.get<string>('MASTER_CHEF_ADDRESS');
-    if (!masterChefAddress) return;
-
-    const publicClient = this.blockchainProvider.getPublicClient();
-
-    try {
-      // 检查是否已在 MasterChef 中注册
-      const mcPoolLength = await publicClient.readContract({
-        address: masterChefAddress as `0x${string}`,
-        abi: this.masterChefReadAbi,
-        functionName: 'poolLength',
-      }) as bigint;
-
-      for (let i = 0n; i < mcPoolLength; i++) {
-        const poolInfo = await publicClient.readContract({
-          address: masterChefAddress as `0x${string}`,
-          abi: this.masterChefReadAbi,
-          functionName: 'poolInfo',
-          args: [i],
-        }) as [string, bigint, bigint, bigint];
-
-        if (poolInfo[0].toLowerCase() === pairAddress.toLowerCase()) {
-          this.logger.debug(`Pair ${pairAddress} already in MasterChef (pool ${i})`);
-          return; // 已注册，无需操作
-        }
-      }
-
-      // 未注册，添加到 MasterChef
-      const DEFAULT_ALLOC_POINT = 100;
-      const txHash = await this.blockchainProvider.addFarmPool(
-        masterChefAddress as Address,
-        DEFAULT_ALLOC_POINT,
-        pairAddress,
-      );
-
-      if (txHash) {
-        this.logger.log(`🌾 Auto-added ${pairAddress} to MasterChef farming`);
-      } else {
-        this.logger.warn(`⚠️  Failed to add ${pairAddress} to MasterChef`);
-      }
-    } catch (error) {
-      this.logger.error(`Error ensuring farm pool for ${pairAddress}:`, error);
     }
   }
 

@@ -78,24 +78,6 @@ export class EventsGateway
   }
 
   /**
-   * 广播挖矿操作事件
-   * 
-   * 事件类型：
-   * - deposit: 质押
-   * - withdraw: 提取
-   * - reward_paid: 奖励发放
-   * - emergency_withdraw: 紧急提取
-   * - pool_added: 新增池子
-   * - pool_updated: 池子更新
-   */
-  broadcastFarmingAction(farmingData: any) {
-    this.server.emit('farming:action', farmingData);
-    this.logger.debug(
-      `📡 Broadcasted farming action: ${farmingData.type} - pool ${farmingData.poolId || 'N/A'}`,
-    );
-  }
-
-  /**
    * 发送给特定客户端
    */
   sendToClient(clientId: string, event: string, data: any) {
